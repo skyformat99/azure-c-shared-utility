@@ -3,17 +3,17 @@
 
 #include <stdlib.h>
 #include "azure_c_shared_utility/gballoc.h"
+
 #include <stdint.h>
+#include "azure_c_shared_utility/agenttime.h"
 #include "azure_c_shared_utility/tickcounter.h"
 #include "azure_c_shared_utility/optimize_size.h"
 #include "azure_c_shared_utility/xlogging.h"
-#include "linux_time.h"
 
-
+#define INVALID_TIME_VALUE      (time_t)(-1)
 typedef struct TICK_COUNTER_INSTANCE_TAG
 {
     time_t init_time_value;
-    tickcounter_ms_t current_ms;
 } TICK_COUNTER_INSTANCE;
 
 TICK_COUNTER_HANDLE tickcounter_create(void)
@@ -21,18 +21,12 @@ TICK_COUNTER_HANDLE tickcounter_create(void)
     TICK_COUNTER_INSTANCE* result = (TICK_COUNTER_INSTANCE*)malloc(sizeof(TICK_COUNTER_INSTANCE));
     if (result != NULL)
     {
-        set_time_basis();
-
-        result->init_time_value = get_time_s();
+        result->init_time_value = get_time(NULL);
         if (result->init_time_value == INVALID_TIME_VALUE)
         {
             LogError("tickcounter failed: time return INVALID_TIME.");
             free(result);
             result = NULL;
-        }
-        else
-        {
-            result->current_ms = 0;
         }
     }
     return result;
@@ -57,7 +51,7 @@ int tickcounter_get_current_ms(TICK_COUNTER_HANDLE tick_counter, tickcounter_ms_
     }
     else
     {
-        time_t time_value = get_time_s();
+        time_t time_value = get_time(NULL);
         if (time_value == INVALID_TIME_VALUE)
         {
             result = __FAILURE__;
@@ -65,8 +59,7 @@ int tickcounter_get_current_ms(TICK_COUNTER_HANDLE tick_counter, tickcounter_ms_
         else
         {
             TICK_COUNTER_INSTANCE* tick_counter_instance = (TICK_COUNTER_INSTANCE*)tick_counter;
-            tick_counter_instance->current_ms = (tickcounter_ms_t)(difftime(time_value, tick_counter_instance->init_time_value) * 1000);
-            *current_ms = tick_counter_instance->current_ms;
+            *current_ms = (tickcounter_ms_t)(difftime(time_value, tick_counter_instance->init_time_value) * 1000);
             result = 0;
         }
     }

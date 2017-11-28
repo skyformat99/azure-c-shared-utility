@@ -205,6 +205,7 @@ ${LOGGING_C_FILE}
 ./src/sha384-512.c
 ./src/strings.c
 ./src/string_tokenizer.c
+./src/tickcounter.c
 ./src/uuid.c
 ./src/urlencode.c
 ./src/usha.c
@@ -216,7 +217,6 @@ ${CONDITION_C_FILE}
 ${LOCK_C_FILE}
 ${PLATFORM_C_FILE}
 ${SOCKETIO_C_FILE}
-${TICKCOUTER_C_FILE}
 ${THREAD_C_FILE}
 ${UNIQUEID_C_FILE}
 )

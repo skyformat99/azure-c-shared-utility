@@ -12,14 +12,9 @@ ${theseTestsName}.c
 )
 
 set(${theseTestsName}_c_files
-	${TICKCOUTER_C_FILE}
+	../../src/tickcounter.c
+    ../../adapters/agenttime.c
 )
-
-if(UNIX) # linux & apple
-    set(${theseTestsName}_c_files ${${theseTestsName}_c_files}
-        ../../adapters/linux_time.c
-    )
-endif()
 
 set(${theseTestsName}_h_files
 )

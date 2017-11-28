@@ -93,6 +93,5 @@ set(mbed_project_files
         ${CMAKE_CURRENT_SOURCE_DIR}/../../adapters/socketio_mbed.c
         ${CMAKE_CURRENT_SOURCE_DIR}/../../adapters/tcpsocketconnection_c.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/../../adapters/threadapi_rtx_mbed.cpp
-        ${CMAKE_CURRENT_SOURCE_DIR}/../../adapters/tickcounter_mbed.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/../../adapters/uniqueid_stub.c
         )

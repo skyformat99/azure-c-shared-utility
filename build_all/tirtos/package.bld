@@ -36,7 +36,7 @@ var SRCS = [
     "strings.c",
     "string_tokenizer.c",
     "threadapi_pthreads.c",
-    "tickcounter_tirtos.c",
+    "tickcounter.c",
     "urlencode.c",
     "usha.c",
     "vector.c",
