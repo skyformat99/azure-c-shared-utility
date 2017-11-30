@@ -18,6 +18,7 @@
 #include "azure_c_shared_utility/crt_abstractions.h"
 #include "azure_c_shared_utility/x509_openssl.h"
 #include "azure_c_shared_utility/shared_util_options.h"
+#include "azure_c_shared_utility/tlsio_options.h"
 
 static const char* OPTION_TLS_VERSION = "tls_version";
 
@@ -67,7 +68,7 @@ typedef struct TLS_IO_INSTANCE_TAG
     BIO* in_bio;
     BIO* out_bio;
     TLSIO_STATE tlsio_state;
-    char* certificate;
+    const char* trusted_certs;
     const char* x509certificate;
     const char* x509privatekey;
     const char* x509_ecc_cert;
@@ -293,8 +294,8 @@ static OPTIONHANDLER_HANDLE tlsio_openssl_retrieveoptions(CONCRETE_IO_HANDLE han
                 result = NULL;
             }
             else if (
-                (tls_io_instance->certificate != NULL) &&
-                (OptionHandler_AddOption(result, "TrustedCerts", tls_io_instance->certificate) != OPTIONHANDLER_OK)
+                (tls_io_instance->trusted_certs != NULL) &&
+                (OptionHandler_AddOption(result, "TrustedCerts", tls_io_instance->trusted_certs) != OPTIONHANDLER_OK)
                 )
             {
                 LogError("unable to save TrustedCerts option");
@@ -947,7 +948,7 @@ static int create_openssl_instance(TLS_IO_INSTANCE* tlsInstance)
         log_ERR_get_error("Failed allocating OpenSSL context.");
         result = __FAILURE__;
     }
-    else if (add_certificate_to_store(tlsInstance, tlsInstance->certificate) != 0)
+    else if (add_certificate_to_store(tlsInstance, tlsInstance->trusted_certs) != 0)
     {
         SSL_CTX_free(tlsInstance->ssl_context);
         tlsInstance->ssl_context = NULL;
@@ -1134,7 +1135,7 @@ CONCRETE_IO_HANDLE tlsio_openssl_create(void* io_create_parameters)
             }
             else
             {
-                result->certificate = NULL;
+                result->trusted_certs = NULL;
                 result->in_bio = NULL;
                 result->out_bio = NULL;
                 result->on_bytes_received = NULL;
@@ -1183,10 +1184,10 @@ void tlsio_openssl_destroy(CONCRETE_IO_HANDLE tls_io)
     else
     {
         TLS_IO_INSTANCE* tls_io_instance = (TLS_IO_INSTANCE*)tls_io;
-        if (tls_io_instance->certificate != NULL)
+        if (tls_io_instance->trusted_certs != NULL)
         {
-            free(tls_io_instance->certificate);
-            tls_io_instance->certificate = NULL;
+            free((void*)tls_io_instance->trusted_certs);
+            tls_io_instance->trusted_certs = NULL;
         }
         free((void*)tls_io_instance->x509certificate);
         free((void*)tls_io_instance->x509privatekey);
@@ -1435,22 +1436,22 @@ int tlsio_openssl_setoption(CONCRETE_IO_HANDLE tls_io, const char* optionName, c
             const char* cert = (const char*)value;
             size_t len;
 
-            if (tls_io_instance->certificate != NULL)
+            if (tls_io_instance->trusted_certs != NULL)
             {
                 // Free the memory if it has been previously allocated
-                free(tls_io_instance->certificate);
+                free((void*)tls_io_instance->trusted_certs);
             }
 
             // Store the certificate
             len = strlen(cert);
-            tls_io_instance->certificate = malloc(len + 1);
-            if (tls_io_instance->certificate == NULL)
+            tls_io_instance->trusted_certs = malloc(len + 1);
+            if (tls_io_instance->trusted_certs == NULL)
             {
                 result = __FAILURE__;
             }
             else
             {
-                strcpy(tls_io_instance->certificate, cert);
+                strcpy((char*)tls_io_instance->trusted_certs, cert);
                 result = 0;
             }
 
