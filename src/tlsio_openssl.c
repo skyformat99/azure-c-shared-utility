@@ -68,11 +68,6 @@ typedef struct TLS_IO_INSTANCE_TAG
     BIO* in_bio;
     BIO* out_bio;
     TLSIO_STATE tlsio_state;
-    const char* trusted_certs;
-    const char* x509certificate;
-    const char* x509privatekey;
-    const char* x509_ecc_cert;
-    const char* x509_ecc_aliaskey;
     TLSIO_OPTIONS tlsio_options;
     TLSIO_VERSION tls_version;
     TLS_CERTIFICATE_VALIDATION_CALLBACK tls_validation_callback;
@@ -203,16 +198,17 @@ static OPTIONHANDLER_HANDLE tlsio_openssl_retrieveoptions(CONCRETE_IO_HANDLE han
     }
     else
     {
-        result = OptionHandler_Create(tlsio_openssl_CloneOption, tlsio_openssl_DestroyOption, tlsio_openssl_setoption);
+        TLS_IO_INSTANCE* tls_io_instance = (TLS_IO_INSTANCE*)handle;
+        result = tlsio_options_retrieve_options(&tls_io_instance->tlsio_options, 
+            tlsio_openssl_CloneOption, tlsio_openssl_DestroyOption, tlsio_openssl_setoption);
         if (result == NULL)
         {
-            LogError("unable to OptionHandler_Create");
+            // The tlsio_options_retrieve_options helper did the error logging
             /*return as is*/
         }
         else
         {
             /*this layer cares about the certificates and the x509 credentials*/
-            TLS_IO_INSTANCE* tls_io_instance = (TLS_IO_INSTANCE*)handle;
             OPTIONHANDLER_HANDLE underlying_io_options;
 
             if ((underlying_io_options = xio_retrieveoptions(tls_io_instance->underlying_io)) == NULL ||
@@ -220,51 +216,6 @@ static OPTIONHANDLER_HANDLE tlsio_openssl_retrieveoptions(CONCRETE_IO_HANDLE han
             {
                 LogError("unable to save underlying_io options");
                 OptionHandler_Destroy(underlying_io_options);
-                OptionHandler_Destroy(result);
-                result = NULL;
-            }
-            else if (
-                (tls_io_instance->trusted_certs != NULL) &&
-                (OptionHandler_AddOption(result, OPTION_TRUSTED_CERT, tls_io_instance->trusted_certs) != OPTIONHANDLER_OK)
-                )
-            {
-                LogError("unable to save TrustedCerts option");
-                OptionHandler_Destroy(result);
-                result = NULL;
-            }
-            else if (
-                (tls_io_instance->x509certificate != NULL) &&
-                (OptionHandler_AddOption(result, SU_OPTION_X509_CERT, tls_io_instance->x509certificate) != OPTIONHANDLER_OK)
-                )
-            {
-                LogError("unable to save x509certificate option");
-                OptionHandler_Destroy(result);
-                result = NULL;
-            }
-            else if (
-                (tls_io_instance->x509privatekey != NULL) &&
-                (OptionHandler_AddOption(result, SU_OPTION_X509_PRIVATE_KEY, tls_io_instance->x509privatekey) != OPTIONHANDLER_OK)
-                )
-            {
-                LogError("unable to save x509privatekey option");
-                OptionHandler_Destroy(result);
-                result = NULL;
-            }
-            else if (
-                (tls_io_instance->x509_ecc_cert != NULL) &&
-                (OptionHandler_AddOption(result, OPTION_X509_ECC_CERT, tls_io_instance->x509_ecc_cert) != OPTIONHANDLER_OK)
-                )
-            {
-                LogError("unable to save x509_ecc_cert option");
-                OptionHandler_Destroy(result);
-                result = NULL;
-            }
-            else if (
-                (tls_io_instance->x509_ecc_aliaskey != NULL) &&
-                (OptionHandler_AddOption(result, OPTION_X509_ECC_KEY, tls_io_instance->x509_ecc_aliaskey) != OPTIONHANDLER_OK)
-                )
-            {
-                LogError("unable to save x509_ecc_aliaskey option");
                 OptionHandler_Destroy(result);
                 result = NULL;
             }
@@ -878,7 +829,7 @@ static int create_openssl_instance(TLS_IO_INSTANCE* tlsInstance)
         log_ERR_get_error("Failed allocating OpenSSL context.");
         result = __FAILURE__;
     }
-    else if (add_certificate_to_store(tlsInstance, tlsInstance->trusted_certs) != 0)
+    else if (add_certificate_to_store(tlsInstance, tlsInstance->tlsio_options.trusted_certs) != 0)
     {
         SSL_CTX_free(tlsInstance->ssl_context);
         tlsInstance->ssl_context = NULL;
@@ -887,9 +838,10 @@ static int create_openssl_instance(TLS_IO_INSTANCE* tlsInstance)
     }
     /*x509 authentication can only be build before underlying connection is realized*/
     else if (
-        (tlsInstance->x509certificate != NULL) &&
-        (tlsInstance->x509privatekey != NULL) &&
-        (x509_openssl_add_credentials(tlsInstance->ssl_context, tlsInstance->x509certificate, tlsInstance->x509privatekey) != 0)
+        (tlsInstance->tlsio_options.x509_type == TLSIO_OPTIONS_x509_TYPE_STANDARD) &&
+        (tlsInstance->tlsio_options.x509_cert != NULL) &&
+        (tlsInstance->tlsio_options.x509_key != NULL) &&
+        (x509_openssl_add_credentials(tlsInstance->ssl_context, tlsInstance->tlsio_options.x509_cert, tlsInstance->tlsio_options.x509_key) != 0)
         )
     {
         SSL_CTX_free(tlsInstance->ssl_context);
@@ -898,9 +850,10 @@ static int create_openssl_instance(TLS_IO_INSTANCE* tlsInstance)
         result = __FAILURE__;
     }
     else if (
-        (tlsInstance->x509_ecc_cert != NULL) &&
-        (tlsInstance->x509_ecc_aliaskey != NULL) &&
-        (x509_openssl_add_ecc_credentials(tlsInstance->ssl_context, tlsInstance->x509_ecc_cert, tlsInstance->x509_ecc_aliaskey) != 0)
+        (tlsInstance->tlsio_options.x509_type == TLSIO_OPTIONS_x509_TYPE_ECC) &&
+        (tlsInstance->tlsio_options.x509_cert != NULL) &&
+        (tlsInstance->tlsio_options.x509_key != NULL) &&
+        (x509_openssl_add_ecc_credentials(tlsInstance->ssl_context, tlsInstance->tlsio_options.x509_cert, tlsInstance->tlsio_options.x509_key) != 0)
         )
     {
         SSL_CTX_free(tlsInstance->ssl_context);
@@ -1068,7 +1021,6 @@ CONCRETE_IO_HANDLE tlsio_openssl_create(void* io_create_parameters)
                 // This tlsio supports trusted certs, x509, and x509 ECC
                 tlsio_options_initialize(&result->tlsio_options,
                     TLSIO_OPTION_BIT_TRUSTED_CERTS | TLSIO_OPTION_BIT_x509_CERT | TLSIO_OPTION_BIT_x509_ECC_CERT);
-                result->trusted_certs = NULL;
                 result->in_bio = NULL;
                 result->out_bio = NULL;
                 result->on_bytes_received = NULL;
@@ -1083,10 +1035,6 @@ CONCRETE_IO_HANDLE tlsio_openssl_create(void* io_create_parameters)
                 result->ssl_context = NULL;
                 result->tls_validation_callback = NULL;
                 result->tls_validation_callback_data = NULL;
-                result->x509certificate = NULL;
-                result->x509privatekey = NULL;
-                result->x509_ecc_cert = NULL;
-                result->x509_ecc_aliaskey = NULL;
 
                 result->tls_version = VERSION_1_0;
 
@@ -1118,15 +1066,6 @@ void tlsio_openssl_destroy(CONCRETE_IO_HANDLE tls_io)
     {
         TLS_IO_INSTANCE* tls_io_instance = (TLS_IO_INSTANCE*)tls_io;
         tlsio_options_release_resources(&tls_io_instance->tlsio_options);
-        if (tls_io_instance->trusted_certs != NULL)
-        {
-            free((void*)tls_io_instance->trusted_certs);
-            tls_io_instance->trusted_certs = NULL;
-        }
-        free((void*)tls_io_instance->x509certificate);
-        free((void*)tls_io_instance->x509privatekey);
-        free((void*)tls_io_instance->x509_ecc_cert);
-        free((void*)tls_io_instance->x509_ecc_aliaskey);
         close_openssl_instance(tls_io_instance);
         if (tls_io_instance->underlying_io != NULL)
         {

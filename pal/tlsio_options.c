@@ -344,3 +344,66 @@ TLSIO_OPTIONS_RESULT tlsio_options_set(TLSIO_OPTIONS* options,
     return result;
 }
 
+OPTIONHANDLER_HANDLE tlsio_options_retrieve_options(TLSIO_OPTIONS* options,
+    pfCloneOption cloneOption, pfDestroyOption destroyOption, pfSetOption setOption)
+{
+    OPTIONHANDLER_HANDLE result;
+    if (options == NULL)
+    {
+        LogError("Null parameter in options: %p, cloneOption: %p, destroyOption: %p, setOption: %p",
+            options, cloneOption, destroyOption, setOption);
+        result = NULL;
+    }
+    else
+    {
+        result = OptionHandler_Create(cloneOption, destroyOption, setOption);
+        if (result == NULL)
+        {
+            LogError("OptionHandler_Create failed");
+            /*return as is*/
+        }
+        else
+        {
+            if (
+                (options->trusted_certs != NULL) &&
+                (OptionHandler_AddOption(result, OPTION_TRUSTED_CERT, options->trusted_certs) != OPTIONHANDLER_OK)
+                )
+            {
+                LogError("unable to save TrustedCerts option");
+                OptionHandler_Destroy(result);
+                result = NULL;
+            }
+            else if (options->x509_type != TLSIO_OPTIONS_x509_TYPE_UNSPECIFIED)
+            {
+                const char* x509_cert_option = SU_OPTION_X509_CERT;
+                const char* x509_key_option = SU_OPTION_X509_PRIVATE_KEY;
+                if (options->x509_type == TLSIO_OPTIONS_x509_TYPE_ECC)
+                {
+                    x509_cert_option = OPTION_X509_ECC_CERT;
+                    x509_key_option = OPTION_X509_ECC_KEY;
+                }
+                if (
+                    (options->x509_cert != NULL) &&
+                    (OptionHandler_AddOption(result, x509_cert_option, options->x509_cert) != OPTIONHANDLER_OK)
+                    )
+                {
+                    LogError("unable to save x509 cert option");
+                    OptionHandler_Destroy(result);
+                    result = NULL;
+                }
+                else if (
+                    (options->x509_key != NULL) &&
+                    (OptionHandler_AddOption(result, x509_key_option, options->x509_key) != OPTIONHANDLER_OK)
+                    )
+                {
+                    LogError("unable to save x509 key option");
+                    OptionHandler_Destroy(result);
+                    result = NULL;
+                }
+            }
+        }
+    }
+
+    return result;
+}
+

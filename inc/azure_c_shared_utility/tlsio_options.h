@@ -63,7 +63,8 @@ extern "C" {
 
     TLSIO_OPTIONS_RESULT tlsio_options_destroy_option(const char* name, const void* value);
 
-    OPTIONHANDLER_HANDLE tlsio_options_retrieve_options(TLSIO_OPTIONS* options);
+    OPTIONHANDLER_HANDLE tlsio_options_retrieve_options(TLSIO_OPTIONS* options, 
+        pfCloneOption cloneOption, pfDestroyOption destroyOption, pfSetOption setOption);
 
 
 #ifdef __cplusplus
