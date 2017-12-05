@@ -250,6 +250,7 @@ endif()
 if(${use_openssl})
     set(source_c_files ${source_c_files}
         ./src/tlsio_openssl.c
+        ./pal/tlsio_options.c
         ./src/x509_openssl.c
     )
 endif()
@@ -359,6 +360,7 @@ endif()
 if(${use_openssl})
     set(source_h_files ${source_h_files}
         ./inc/azure_c_shared_utility/tlsio_openssl.h
+        ./inc/azure_c_shared_utility/tlsio_options.h
         ./inc/azure_c_shared_utility/x509_openssl.h
         )
 endif()

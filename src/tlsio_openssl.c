@@ -73,6 +73,7 @@ typedef struct TLS_IO_INSTANCE_TAG
     const char* x509privatekey;
     const char* x509_ecc_cert;
     const char* x509_ecc_aliaskey;
+    TLSIO_OPTIONS tlsio_options;
     TLSIO_VERSION tls_version;
     TLS_CERTIFICATE_VALIDATION_CALLBACK tls_validation_callback;
     void* tls_validation_callback_data;
@@ -86,138 +87,79 @@ struct CRYPTO_dynlock_value
 #define OPTION_UNDERLYING_IO_OPTIONS        "underlying_io_options"
 #define SSL_DO_HANDSHAKE_SUCCESS 1
 
-
 /*this function will clone an option given by name and value*/
 static void* tlsio_openssl_CloneOption(const char* name, const void* value)
 {
     void* result;
-    if (
-        (name == NULL) || (value == NULL)
-        )
+    void* helper_result;
+    TLSIO_OPTIONS_RESULT helper_status = TLSIO_OPTIONS_RESULT_ERROR;
+    helper_result = tlsio_options_clone_option(name, value, &helper_status);
+    if (helper_status == TLSIO_OPTIONS_RESULT_SUCCESS)
     {
-        LogError("invalid parameter detected: const char* name=%p, const void* value=%p", name, value);
+        result = helper_result;
+    }
+    else if (helper_status == TLSIO_OPTIONS_RESULT_ERROR)
+    {
+        // This failure was logged in the tlsio_options_clone_option helper function
         result = NULL;
     }
-    else
+    else if (strcmp(name, OPTION_UNDERLYING_IO_OPTIONS) == 0)
     {
-        if (strcmp(name, OPTION_UNDERLYING_IO_OPTIONS) == 0)
-        {
-            result = (void*)value;
-        }
-        else if (strcmp(name, "TrustedCerts") == 0)
-        {
-            if (mallocAndStrcpy_s((char**)&result, value) != 0)
-            {
-                LogError("unable to mallocAndStrcpy_s TrustedCerts value");
-                result = NULL;
-            }
-            else
-            {
-                /*return as is*/
-            }
-        }
-        else if (strcmp(name, SU_OPTION_X509_CERT) == 0)
-        {
-            if (mallocAndStrcpy_s((char**)&result, value) != 0)
-            {
-                LogError("unable to mallocAndStrcpy_s x509certificate value");
-                result = NULL;
-            }
-            else
-            {
-                /*return as is*/
-            }
-        }
-        else if (strcmp(name, SU_OPTION_X509_PRIVATE_KEY) == 0)
-        {
-            if (mallocAndStrcpy_s((char**)&result, value) != 0)
-            {
-                LogError("unable to mallocAndStrcpy_s x509privatekey value");
-                result = NULL;
-            }
-            else
-            {
-                /*return as is*/
-            }
-        }
-        else if (strcmp(name, OPTION_X509_ECC_CERT) == 0)
-        {
-            if (mallocAndStrcpy_s((char**)&result, value) != 0)
-            {
-                LogError("unable to mallocAndStrcpy_s x509EccCertificate value");
-                result = NULL;
-            }
-            else
-            {
-                /*return as is*/
-            }
-        }
-        else if (strcmp(name, OPTION_X509_ECC_KEY) == 0)
-        {
-            if (mallocAndStrcpy_s((char**)&result, value) != 0)
-            {
-                LogError("unable to mallocAndStrcpy_s x509EccKey value");
-                result = NULL;
-            }
-            else
-            {
-                /*return as is*/
-            }
-        }
-        else if (strcmp(name, OPTION_TLS_VERSION) == 0)
-        {
-            int int_value;
-            
-            if (*(TLSIO_VERSION*)value == VERSION_1_0)
-            {
-                int_value = 10;
-            }
-            else if (*(TLSIO_VERSION*)value == VERSION_1_1)
-            {
-                int_value = 11;
-            }
-            else if (*(TLSIO_VERSION*)value == VERSION_1_2)
-            {
-                int_value = 12;
-            }
-            else
-            {
-                LogError("Unexpected TLS version value (%d)", *(int*)value);
-                int_value = -1;
-            }
-            
-            if (int_value < 0)
-            {
-                result = NULL;
-            }
-            else
-            {
-                int* value_clone;
+        result = (void*)value;
+    }
+    else if (strcmp(name, OPTION_TLS_VERSION) == 0)
+    {
+        int int_value;
 
-                if ((value_clone = (int*)malloc(sizeof(int))) == NULL)
-                {
-                    LogError("Failed clonning tls_version option");
-                }
-                else
-                {
-                    *value_clone = int_value;
-                }
-                
-                result = value_clone;
-            }
-        }
-        else if (
-            (strcmp(name, "tls_validation_callback") == 0) ||
-            (strcmp(name, "tls_validation_callback_data") == 0)
-            )
+        if (*(TLSIO_VERSION*)value == VERSION_1_0)
         {
-            result = (void*)value;
+            int_value = 10;
+        }
+        else if (*(TLSIO_VERSION*)value == VERSION_1_1)
+        {
+            int_value = 11;
+        }
+        else if (*(TLSIO_VERSION*)value == VERSION_1_2)
+        {
+            int_value = 12;
         }
         else
         {
-            LogError("not handled option : %s", name);
+            LogError("Unexpected TLS version value (%d)", *(int*)value);
+            int_value = -1;
+        }
+
+        if (int_value < 0)
+        {
             result = NULL;
         }
+        else
+        {
+            int* value_clone;
+
+            if ((value_clone = (int*)malloc(sizeof(int))) == NULL)
+            {
+                LogError("Failed clonning tls_version option");
+            }
+            else
+            {
+                *value_clone = int_value;
+            }
+
+            result = value_clone;
+        }
+    }
+    else if (
+        (strcmp(name, "tls_validation_callback") == 0) ||
+        (strcmp(name, "tls_validation_callback_data") == 0)
+        )
+    {
+        result = (void*)value;
+    }
+    else
+    {
+        LogError("not handled option : %s", name);
+        result = NULL;
     }
     return result;
 }
@@ -225,23 +167,11 @@ static void* tlsio_openssl_CloneOption(const char* name, const void* value)
 /*this function destroys an option previously created*/
 static void tlsio_openssl_DestroyOption(const char* name, const void* value)
 {
-    /*since all options for this layer are actually string copies., disposing of one is just calling free*/
-    if (
-        (name == NULL) || (value == NULL)
-        )
+    // tlsio_options_destroy_option performs parameter validation and logs appropriate errors
+    TLSIO_OPTIONS_RESULT result = tlsio_options_destroy_option(name, value);
+    if (result == TLSIO_OPTIONS_RESULT_NOT_HANDLED)
     {
-        LogError("invalid parameter detected: const char* name=%p, const void* value=%p", name, value);
-    }
-    else
-    {
-        if (
-            (strcmp(name, "TrustedCerts") == 0) ||
-            (strcmp(name, SU_OPTION_X509_CERT) == 0) ||
-            (strcmp(name, SU_OPTION_X509_PRIVATE_KEY) == 0) ||
-            (strcmp(name, OPTION_X509_ECC_CERT) == 0) ||
-            (strcmp(name, OPTION_X509_ECC_KEY) == 0) ||
-            (strcmp(name, OPTION_TLS_VERSION) == 0)
-            )
+        if (strcmp(name, OPTION_TLS_VERSION) == 0)
         {
             free((void*)value);
         }
@@ -295,7 +225,7 @@ static OPTIONHANDLER_HANDLE tlsio_openssl_retrieveoptions(CONCRETE_IO_HANDLE han
             }
             else if (
                 (tls_io_instance->trusted_certs != NULL) &&
-                (OptionHandler_AddOption(result, "TrustedCerts", tls_io_instance->trusted_certs) != OPTIONHANDLER_OK)
+                (OptionHandler_AddOption(result, OPTION_TRUSTED_CERT, tls_io_instance->trusted_certs) != OPTIONHANDLER_OK)
                 )
             {
                 LogError("unable to save TrustedCerts option");
@@ -1135,6 +1065,9 @@ CONCRETE_IO_HANDLE tlsio_openssl_create(void* io_create_parameters)
             }
             else
             {
+                // This tlsio supports trusted certs, x509, and x509 ECC
+                tlsio_options_initialize(&result->tlsio_options,
+                    TLSIO_OPTION_BIT_TRUSTED_CERTS | TLSIO_OPTION_BIT_x509_CERT | TLSIO_OPTION_BIT_x509_ECC_CERT);
                 result->trusted_certs = NULL;
                 result->in_bio = NULL;
                 result->out_bio = NULL;
@@ -1170,7 +1103,7 @@ CONCRETE_IO_HANDLE tlsio_openssl_create(void* io_create_parameters)
                 }
             }
         }
-}
+    }
 
     return result;
 }
@@ -1184,6 +1117,7 @@ void tlsio_openssl_destroy(CONCRETE_IO_HANDLE tls_io)
     else
     {
         TLS_IO_INSTANCE* tls_io_instance = (TLS_IO_INSTANCE*)tls_io;
+        tlsio_options_release_resources(&tls_io_instance->tlsio_options);
         if (tls_io_instance->trusted_certs != NULL)
         {
             free((void*)tls_io_instance->trusted_certs);
@@ -1423,137 +1357,26 @@ int tlsio_openssl_setoption(CONCRETE_IO_HANDLE tls_io, const char* optionName, c
 {
     int result;
 
-    if (tls_io == NULL || optionName == NULL)
+    // optionName and value parameters are validated by tlsio_options_set
+    if (tls_io == NULL)
     {
+        LogError("Null tls_io");
         result = __FAILURE__;
     }
     else
     {
         TLS_IO_INSTANCE* tls_io_instance = (TLS_IO_INSTANCE*)tls_io;
+        TLSIO_OPTIONS_RESULT helper_result = tlsio_options_set(&tls_io_instance->tlsio_options,
+            optionName, value);
 
-        if (strcmp("TrustedCerts", optionName) == 0)
+        if (helper_result == TLSIO_OPTIONS_RESULT_ERROR)
         {
-            const char* cert = (const char*)value;
-            size_t len;
-
-            if (tls_io_instance->trusted_certs != NULL)
-            {
-                // Free the memory if it has been previously allocated
-                free((void*)tls_io_instance->trusted_certs);
-            }
-
-            // Store the certificate
-            len = strlen(cert);
-            tls_io_instance->trusted_certs = malloc(len + 1);
-            if (tls_io_instance->trusted_certs == NULL)
-            {
-                result = __FAILURE__;
-            }
-            else
-            {
-                strcpy((char*)tls_io_instance->trusted_certs, cert);
-                result = 0;
-            }
-
-            // If we're previously connected then add the cert to the context
-            if (tls_io_instance->ssl_context != NULL)
-            {
-                result = add_certificate_to_store(tls_io_instance, cert);
-            }
+            // This failure is logged by the tlsio_options_set helper function
+            result = __FAILURE__;
         }
-        else if (strcmp(SU_OPTION_X509_CERT, optionName) == 0)
+        else if (helper_result == TLSIO_OPTIONS_RESULT_SUCCESS)
         {
-            if (tls_io_instance->x509certificate != NULL)
-            {
-                LogError("unable to set x509 options more than once");
-                result = __FAILURE__;
-            }
-            else
-            {
-                /*let's make a copy of this option*/
-                if (mallocAndStrcpy_s((char**)&tls_io_instance->x509certificate, value) != 0)
-                {
-                    LogError("unable to mallocAndStrcpy_s");
-                    result = __FAILURE__;
-                }
-                else
-                {
-                    result = 0;
-                }
-            }
-        }
-        else if (strcmp(SU_OPTION_X509_PRIVATE_KEY, optionName) == 0)
-        {
-            if (tls_io_instance->x509privatekey != NULL)
-            {
-                LogError("unable to set more than once x509 options");
-                result = __FAILURE__;
-            }
-            else
-            {
-                /*let's make a copy of this option*/
-                if (mallocAndStrcpy_s((char**)&tls_io_instance->x509privatekey, value) != 0)
-                {
-                    LogError("unable to mallocAndStrcpy_s");
-                    result = __FAILURE__;
-                }
-                else
-                {
-                    result = 0;
-                }
-            }
-        }
-        else if (strcmp(OPTION_X509_ECC_KEY, optionName) == 0)
-        {
-            if (tls_io_instance->x509_ecc_aliaskey != NULL)
-            {
-                LogError("unable to set more than once x509 options");
-                result = __FAILURE__;
-            }
-            else if (tls_io_instance->x509certificate != NULL || tls_io_instance->x509privatekey != NULL)
-            {
-                LogError("unable to set x509 certificates and x509 ECC certificates");
-                result = __FAILURE__;
-            }
-            else
-            {
-                /*let's make a copy of this option*/
-                if (mallocAndStrcpy_s((char**)&tls_io_instance->x509_ecc_aliaskey, value) != 0)
-                {
-                    LogError("unable to mallocAndStrcpy_s");
-                    result = __FAILURE__;
-                }
-                else
-                {
-                    result = 0;
-                }
-            }
-        }
-        else if (strcmp(OPTION_X509_ECC_CERT, optionName) == 0)
-        {
-            if (tls_io_instance->x509_ecc_cert != NULL)
-            {
-                LogError("unable to set more than once x509 options");
-                result = __FAILURE__;
-            }
-            else if (tls_io_instance->x509certificate != NULL || tls_io_instance->x509privatekey != NULL)
-            {
-                LogError("unable to set x509 certificates and x509 ECC certificates");
-                result = __FAILURE__;
-            }
-            else
-            {
-                /*let's make a copy of this option*/
-                if (mallocAndStrcpy_s((char**)&tls_io_instance->x509_ecc_cert, value) != 0)
-                {
-                    LogError("unable to mallocAndStrcpy_s");
-                    result = __FAILURE__;
-                }
-                else
-                {
-                    result = 0;
-                }
-            }
+            result = 0;
         }
         else if (strcmp("tls_validation_callback", optionName) == 0)
         {
