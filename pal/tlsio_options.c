@@ -3,6 +3,7 @@
 
 #include <stdlib.h>
 
+#include "azure_c_shared_utility/gballoc.h"
 #include "azure_c_shared_utility/tlsio_options.h"
 #include "azure_c_shared_utility/shared_util_options.h"
 #include "azure_c_shared_utility/xlogging.h"
