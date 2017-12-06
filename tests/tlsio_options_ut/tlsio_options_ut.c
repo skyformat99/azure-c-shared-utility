@@ -24,6 +24,7 @@
 #include "azure_c_shared_utility/shared_util_options.h"
 
 #include "testrunnerswitcher.h"
+#include "umock_c_negative_tests.h"
 
 
 static TEST_MUTEX_HANDLE g_testByTest;
@@ -36,6 +37,8 @@ const char* fake_x509_cert = "Fake x509 cert";
 const char* fake_x509_key = "Fake x509 key";
 
 #define SET_PV_COUNT 3
+#define SET_INCONSISTENT_x509_COUNT 8
+#define SET_NOT_SUPPORTED_COUNT 5
 
 void ASSERT_COPIED_STRING(const char* target, const char* source)
 {
@@ -53,6 +56,13 @@ static void on_umock_c_error(UMOCK_C_ERROR_CODE error_code)
     (void)snprintf(temp_str, sizeof(temp_str), "umock_c reported error :%s", ENUM_TO_STRING(UMOCK_C_ERROR_CODE, error_code));
     ASSERT_FAIL(temp_str);
 }
+
+static void use_negative_mocks()
+{
+    int negativeTestsInitResult = umock_c_negative_tests_init();
+    ASSERT_ARE_EQUAL(int, 0, negativeTestsInitResult);
+}
+
 
 BEGIN_TEST_SUITE(tlsio_options_unittests)
 
@@ -73,7 +83,6 @@ TEST_SUITE_INITIALIZE(suite_init)
     REGISTER_GLOBAL_MOCK_HOOK(gballoc_malloc, my_gballoc_malloc);
     REGISTER_GLOBAL_MOCK_FAIL_RETURN(gballoc_malloc, NULL);
     REGISTER_GLOBAL_MOCK_HOOK(gballoc_free, my_gballoc_free);
-
 }
 
 TEST_SUITE_CLEANUP(suite_cleanup)
@@ -99,22 +108,6 @@ TEST_FUNCTION_CLEANUP(TestMethodCleanup)
 {
     TEST_MUTEX_RELEASE(g_testByTest);
 }
-//
-//TEST_FUNCTION(tickcounter_create_fails)
-//{
-//    ///arrange
-//    TICK_COUNTER_HANDLE tickHandle;
-//    STRICT_EXPECTED_CALL(gballoc_malloc(IGNORED_NUM_ARG))
-//        .IgnoreArgument(1)
-//        .SetReturn((void*)NULL);
-//
-//    ///act
-//    tickHandle = tickcounter_create();
-//
-//    ///assert
-//    ASSERT_ARE_EQUAL(char_ptr, umock_c_get_expected_calls(), umock_c_get_actual_calls());
-//    ASSERT_IS_NULL(tickHandle);
-//}
 
 TEST_FUNCTION(tlsio_options_initialize__succeeds)
 {
@@ -312,6 +305,122 @@ TEST_FUNCTION(tlsio_options__set_parameter_validation__fails)
         tlsio_options_release_resources(&options);
         assert_gballoc_checks();
     }
+}
+
+TEST_FUNCTION(tlsio_options__set_x509_bad_combos__fails)
+{
+    int i;
+    int k = 0;
+    const char* p0[SET_INCONSISTENT_x509_COUNT];
+    const char* p1[SET_INCONSISTENT_x509_COUNT];
+
+    TLSIO_OPTIONS options;
+    TLSIO_OPTIONS_RESULT result;
+
+    p0[k] = SU_OPTION_X509_CERT; /*  */ p1[k] = OPTION_X509_ECC_CERT; k++;
+    p0[k] = SU_OPTION_X509_CERT; /*  */ p1[k] = OPTION_X509_ECC_KEY; k++;
+    p0[k] = SU_OPTION_X509_PRIVATE_KEY; p1[k] = OPTION_X509_ECC_CERT; k++;
+    p0[k] = SU_OPTION_X509_PRIVATE_KEY; p1[k] = OPTION_X509_ECC_KEY; k++;
+    p0[k] = OPTION_X509_ECC_CERT; /* */ p1[k] = SU_OPTION_X509_CERT; k++;
+    p0[k] = OPTION_X509_ECC_CERT; /* */ p1[k] = SU_OPTION_X509_PRIVATE_KEY; k++;
+    p0[k] = OPTION_X509_ECC_KEY; /*  */ p1[k] = SU_OPTION_X509_CERT; k++;
+    p0[k] = OPTION_X509_ECC_KEY; /*  */ p1[k] = SU_OPTION_X509_PRIVATE_KEY; k++;
+
+
+
+    // Cycle through each failing combo of parameters
+    for (i = 0; i < SET_INCONSISTENT_x509_COUNT; i++)
+    {
+        ///arrange
+        tlsio_options_initialize(&options, TLSIO_OPTION_BIT_TRUSTED_CERTS | TLSIO_OPTION_BIT_x509_CERT | TLSIO_OPTION_BIT_x509_ECC_CERT);
+        result = tlsio_options_set(&options, p0[i], fake_x509_key);
+        ASSERT_ARE_EQUAL(int, (int)result, (int)TLSIO_OPTIONS_RESULT_SUCCESS);
+
+        ///act
+        result = tlsio_options_set(&options, p1[i], fake_x509_key);
+
+        ///assert
+        ASSERT_ARE_EQUAL_WITH_MSG(int, (int)result, (int)TLSIO_OPTIONS_RESULT_ERROR, "Unexpected success with inconsistent x509 settings");
+
+        ///clean
+        tlsio_options_release_resources(&options);
+        assert_gballoc_checks();
+    }
+}
+
+TEST_FUNCTION(tlsio_options__set_not_supported__fails)
+{
+    int i;
+    int k = 0;
+    const char* p0[SET_NOT_SUPPORTED_COUNT];
+
+    TLSIO_OPTIONS options;
+    TLSIO_OPTIONS_RESULT result;
+
+    p0[k] = OPTION_TRUSTED_CERT; /*  */ k++;
+    p0[k] = SU_OPTION_X509_CERT; /*  */ k++;
+    p0[k] = SU_OPTION_X509_PRIVATE_KEY; k++;
+    p0[k] = OPTION_X509_ECC_CERT; /* */ k++;
+    p0[k] = OPTION_X509_ECC_KEY; /*  */ k++;
+
+    // Cycle through each failing combo of parameters
+    for (i = 0; i < SET_NOT_SUPPORTED_COUNT; i++)
+    {
+        ///arrange
+        umock_c_reset_all_calls();
+        tlsio_options_initialize(&options, TLSIO_OPTION_BIT_NONE);
+
+        ///act
+        result = tlsio_options_set(&options, p0[i], fake_x509_key);
+
+        ///assert
+        ASSERT_ARE_EQUAL_WITH_MSG(int, (int)result, (int)TLSIO_OPTIONS_RESULT_ERROR, "Unexpected success with unsupported option");
+
+        ///clean
+        tlsio_options_release_resources(&options);
+        assert_gballoc_checks();
+    }
+}
+
+TEST_FUNCTION(tlsio_options__set_malloc_fail__fails)
+{
+    int i;
+    int k = 0;
+    const char* p0[SET_NOT_SUPPORTED_COUNT];
+
+    TLSIO_OPTIONS options;
+    TLSIO_OPTIONS_RESULT result;
+
+    p0[k] = OPTION_TRUSTED_CERT; /*  */ k++;
+    p0[k] = SU_OPTION_X509_CERT; /*  */ k++;
+    p0[k] = SU_OPTION_X509_PRIVATE_KEY; k++;
+    p0[k] = OPTION_X509_ECC_CERT; /* */ k++;
+    p0[k] = OPTION_X509_ECC_KEY; /*  */ k++;
+    use_negative_mocks();
+
+    STRICT_EXPECTED_CALL(gballoc_malloc(IGNORED_NUM_ARG));  // concrete_io struct
+    umock_c_negative_tests_snapshot();
+
+    // Cycle through each failing combo of parameters
+    for (i = 0; i < SET_NOT_SUPPORTED_COUNT; i++)
+    {
+        ///arrange
+        umock_c_negative_tests_reset();
+        umock_c_negative_tests_fail_call(0);
+
+        tlsio_options_initialize(&options, TLSIO_OPTION_BIT_TRUSTED_CERTS | TLSIO_OPTION_BIT_x509_CERT | TLSIO_OPTION_BIT_x509_ECC_CERT);
+
+        ///act
+        result = tlsio_options_set(&options, p0[i], fake_x509_key);
+
+        ///assert
+        ASSERT_ARE_EQUAL_WITH_MSG(int, (int)result, (int)TLSIO_OPTIONS_RESULT_ERROR, "Unexpected success with malloc failure");
+
+        ///clean
+        tlsio_options_release_resources(&options);
+        assert_gballoc_checks();
+    }
+    umock_c_negative_tests_deinit();
 }
 
 //TEST_FUNCTION(tickcounter_destroy_tick_counter_NULL__succeeds)

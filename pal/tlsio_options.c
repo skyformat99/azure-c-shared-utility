@@ -33,7 +33,7 @@ void tlsio_options_initialize(TLSIO_OPTIONS* options, int supported_options)
 static int set_and_validate_x509_type(TLSIO_OPTIONS* options, TLSIO_OPTIONS_x509_TYPE x509_type)
 {
     int result;
-    if ((options->supported_options | x509_type) == 0)
+    if ((options->supported_options & x509_type) == 0)
     {
         LogError("Unsupported x509 type: %d", x509_type);
         result = __FAILURE__;
@@ -208,7 +208,7 @@ TLSIO_OPTIONS_RESULT tlsio_options_set(TLSIO_OPTIONS* options,
     }
     else if (strcmp(OPTION_TRUSTED_CERT, optionName) == 0)
     {
-        if ((options->supported_options | TLSIO_OPTION_BIT_TRUSTED_CERTS) == 0)
+        if ((options->supported_options & TLSIO_OPTION_BIT_TRUSTED_CERTS) == 0)
         {
             LogError("Trusted certs option not supported");
             result = TLSIO_OPTIONS_RESULT_ERROR;
@@ -277,7 +277,7 @@ TLSIO_OPTIONS_RESULT tlsio_options_set(TLSIO_OPTIONS* options,
             if (mallocAndStrcpy_s((char**)&options->x509_key, value) != 0)
             {
                 LogError("unable to mallocAndStrcpy_s");
-                result = __FAILURE__;
+                result = TLSIO_OPTIONS_RESULT_ERROR;
             }
             else
             {
