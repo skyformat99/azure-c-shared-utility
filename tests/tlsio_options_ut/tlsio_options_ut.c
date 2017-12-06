@@ -1,7 +1,7 @@
 // Copyright (c) Microsoft. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-#ifdef __cplus
+#ifdef __cplusplus
 #include <cstdlib>
 #include <cstddef>
 #else
@@ -141,7 +141,7 @@ TEST_FUNCTION(tlsio_options__set_trusted_certs__succeeds)
     TLSIO_OPTIONS_RESULT result;
     TLSIO_OPTIONS options;
     tlsio_options_initialize(&options, TLSIO_OPTION_BIT_TRUSTED_CERTS);
-    
+
     ///act
     result = tlsio_options_set(&options, OPTION_TRUSTED_CERT, fake_trusted_cert);
 
@@ -164,7 +164,7 @@ TEST_FUNCTION(tlsio_options__set_x509_certs__succeeds)
     TLSIO_OPTIONS_RESULT result;
     TLSIO_OPTIONS options;
     tlsio_options_initialize(&options, TLSIO_OPTION_BIT_x509_CERT);
-    
+
     ///act
     result = tlsio_options_set(&options, SU_OPTION_X509_CERT, fake_x509_cert);
 
@@ -187,7 +187,7 @@ TEST_FUNCTION(tlsio_options__set_x509_ECC_certs__succeeds)
     TLSIO_OPTIONS_RESULT result;
     TLSIO_OPTIONS options;
     tlsio_options_initialize(&options, TLSIO_OPTION_BIT_x509_ECC_CERT);
-    
+
     ///act
     result = tlsio_options_set(&options, OPTION_X509_ECC_CERT, fake_x509_cert);
 
