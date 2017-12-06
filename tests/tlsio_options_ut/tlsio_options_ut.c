@@ -66,9 +66,6 @@ TEST_SUITE_INITIALIZE(suite_init)
 
     REGISTER_UMOCK_ALIAS_TYPE(TLSIO_OPTIONS_x509_TYPE, int);
 
-    REGISTER_GLOBAL_MOCK_HOOK(gballoc_malloc, my_gballoc_malloc);
-    REGISTER_GLOBAL_MOCK_HOOK(gballoc_free, my_gballoc_free);
-
     /**
     * Or you can combine, for example, in the success case malloc will call my_gballoc_malloc, and for
     *    the failed cases, it will return NULL.
