@@ -575,10 +575,10 @@ TEST_FUNCTION(tlsio_options__clone_parameter_validation__fails)
     const char* fm[SET_PV_COUNT];
 
     TLSIO_OPTIONS_RESULT result;
-    void* result_out;
+    void* out_result = NULL;
 
-    p0[k] = NULL; /*          */ p1[k] = fake_x509_key; p2[k] = &result_out; fm[k] = "Unexpected clone_option success when name is NULL"; /* */  k++;
-    p0[k] = OPTION_TRUSTED_CERT; p1[k] = NULL; /*    */ p2[k] = &result_out; fm[k] = "Unexpected clone_option success when option value is NULL"; k++;
+    p0[k] = NULL; /*          */ p1[k] = fake_x509_key; p2[k] = &out_result; fm[k] = "Unexpected clone_option success when name is NULL"; /* */  k++;
+    p0[k] = OPTION_TRUSTED_CERT; p1[k] = NULL; /*    */ p2[k] = &out_result; fm[k] = "Unexpected clone_option success when option value is NULL"; k++;
     p0[k] = OPTION_TRUSTED_CERT; p1[k] = fake_x509_key; p2[k] = NULL; /*  */ fm[k] = "Unexpected clone_option success when out_status is NULL"; k++;
     
     // Cycle through each failing combo of parameters
@@ -590,10 +590,49 @@ TEST_FUNCTION(tlsio_options__clone_parameter_validation__fails)
         result = tlsio_options_clone_option(p0[i], p1[i], p2[i]);
 
         ///assert
+        ASSERT_IS_NULL(out_result);
         ASSERT_ARE_EQUAL_WITH_MSG(int, (int)result, (int)TLSIO_OPTIONS_RESULT_ERROR, "Unexpected success with bad clone parameter");
 
         ///clean
     }
+}
+
+TEST_FUNCTION(tlsio_options__clone_malloc_fail__fails)
+{
+    int i;
+    int k = 0;
+    const char* p0[SET_NOT_SUPPORTED_COUNT];
+
+    void* out_result = NULL;
+    TLSIO_OPTIONS_RESULT result;
+
+    p0[k] = OPTION_TRUSTED_CERT; /*  */ k++;
+    p0[k] = SU_OPTION_X509_CERT; /*  */ k++;
+    p0[k] = SU_OPTION_X509_PRIVATE_KEY; k++;
+    p0[k] = OPTION_X509_ECC_CERT; /* */ k++;
+    p0[k] = OPTION_X509_ECC_KEY; /*  */ k++;
+    use_negative_mocks();
+
+    STRICT_EXPECTED_CALL(gballoc_malloc(IGNORED_NUM_ARG));  // concrete_io struct
+    umock_c_negative_tests_snapshot();
+
+    // Cycle through each failing combo of parameters
+    for (i = 0; i < SET_NOT_SUPPORTED_COUNT; i++)
+    {
+        ///arrange
+        umock_c_negative_tests_reset();
+        umock_c_negative_tests_fail_call(0);
+
+        ///act
+        result = tlsio_options_clone_option(p0[i], fake_x509_key, &out_result);
+
+        ///assert
+        ASSERT_IS_NULL(out_result);
+        ASSERT_ARE_EQUAL_WITH_MSG(int, (int)result, (int)TLSIO_OPTIONS_RESULT_ERROR, "Unexpected success with malloc failure");
+
+        ///clean
+    }
+    umock_c_negative_tests_deinit();
 }
 
 END_TEST_SUITE(tlsio_options_unittests)
