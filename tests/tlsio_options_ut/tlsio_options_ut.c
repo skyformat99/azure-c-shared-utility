@@ -423,115 +423,177 @@ TEST_FUNCTION(tlsio_options__set_malloc_fail__fails)
     umock_c_negative_tests_deinit();
 }
 
-//TEST_FUNCTION(tickcounter_destroy_tick_counter_NULL__succeeds)
-//{
-//    ///arrange
-//
-//    ///act
-//    tickcounter_destroy(NULL);
-//
-//    ///assert
-//    ASSERT_ARE_EQUAL(char_ptr, umock_c_get_expected_calls(), umock_c_get_actual_calls());
-//}
-//
-//TEST_FUNCTION(tickcounter_destroy__succeeds)
-//{
-//    ///arrange
-//    TICK_COUNTER_HANDLE tickHandle = tickcounter_create();
-//    umock_c_reset_all_calls();
-//
-//    STRICT_EXPECTED_CALL(gballoc_free(IGNORED_PTR_ARG))
-//        .IgnoreArgument(1);
-//
-//    ///act
-//    tickcounter_destroy(tickHandle);
-//
-//    ///assert
-//    ASSERT_IS_NOT_NULL(tickHandle);
-//    ASSERT_ARE_EQUAL(char_ptr, umock_c_get_expected_calls(), umock_c_get_actual_calls());
-//}
-//
-//TEST_FUNCTION(tickcounter_get_current_ms_tick_counter_NULL_fail)
-//{
-//    ///arrange
-//    tickcounter_ms_t current_ms = 0;
-//
-//    ///act
-//    int result = tickcounter_get_current_ms(NULL, &current_ms);
-//
-//    ///assert
-//    ASSERT_ARE_NOT_EQUAL(int, 0, result);
-//    ASSERT_ARE_EQUAL(char_ptr, umock_c_get_expected_calls(), umock_c_get_actual_calls());
-//}
-//
-//TEST_FUNCTION(tickcounter_get_current_ms_current_ms_NULL_fail)
-//{
-//    ///arrange
-//    int result;
-//    TICK_COUNTER_HANDLE tickHandle = tickcounter_create();
-//    umock_c_reset_all_calls();
-//
-//    ///act
-//    result = tickcounter_get_current_ms(tickHandle, NULL);
-//
-//    ///assert
-//    ASSERT_ARE_NOT_EQUAL(int, 0, result);
-//    ASSERT_ARE_EQUAL(char_ptr, umock_c_get_expected_calls(), umock_c_get_actual_calls());
-//
-//    tickcounter_destroy(tickHandle);
-//}
-//
-//TEST_FUNCTION(tickcounter_get_current_ms__succeeds)
-//{
-//    ///arrange
-//    int result;
-//    tickcounter_ms_t current_ms;
-//    TICK_COUNTER_HANDLE tickHandle = tickcounter_create();
-//    umock_c_reset_all_calls();
-//
-//    current_ms = 0;
-//
-//    ///act
-//    result = tickcounter_get_current_ms(tickHandle, &current_ms);
-//
-//    ///assert
-//    ASSERT_ARE_EQUAL(int, 0, result);
-//    ASSERT_ARE_EQUAL(char_ptr, umock_c_get_expected_calls(), umock_c_get_actual_calls());
-//
-//    /// clean
-//    tickcounter_destroy(tickHandle);
-//}
-//
-//TEST_FUNCTION(tickcounter_get_current_ms_validate_tick__succeeds)
-//{
-//    ///arrange
-//    CTickCounterMocks mocks;
-//    TICK_COUNTER_HANDLE tickHandle = tickcounter_create();
-//    umock_c_reset_all_calls();
-//
-//    uint64_t first_ms = 0;
-//
-//    ThreadAPI_Sleep(1250);
-//
-//    ///act
-//    int result = tickcounter_get_current_ms(tickHandle, &first_ms);
-//
-//    // busy loop here
-//    ThreadAPI_Sleep(1250);
-//
-//    uint64_t next_ms = 0;
-//
-//    int resultAlso = tickcounter_get_current_ms(tickHandle, &next_ms);
-//
-//    ///assert
-//    ASSERT_ARE_EQUAL(int, 0, result);
-//    ASSERT_ARE_EQUAL(int, 0, resultAlso);
-//    ASSERT_IS_TRUE(first_ms > 0);
-//    ASSERT_IS_TRUE(next_ms > first_ms);
-//    ASSERT_ARE_EQUAL(char_ptr, umock_c_get_expected_calls(), umock_c_get_actual_calls());
-//
-//    /// clean
-//    tickcounter_destroy(tickHandle);
-//}
+TEST_FUNCTION(tlsio_options__release_resources__succeeds)
+{
+    ///arrange
+    TLSIO_OPTIONS_RESULT result;
+    TLSIO_OPTIONS options;
+    tlsio_options_initialize(&options, TLSIO_OPTION_BIT_TRUSTED_CERTS | TLSIO_OPTION_BIT_x509_CERT);
+    result = tlsio_options_set(&options, OPTION_TRUSTED_CERT, fake_trusted_cert);
+    result = tlsio_options_set(&options, SU_OPTION_X509_CERT, fake_x509_cert);
+    result = tlsio_options_set(&options, SU_OPTION_X509_PRIVATE_KEY, fake_x509_key);
+
+    ///act
+    tlsio_options_release_resources(&options);
+
+    ///assert
+    assert_gballoc_checks(); // checks for un-freed memory
+
+    ///clean
+}
+
+TEST_FUNCTION(tlsio_options__clone_option_OPTION_TRUSTED_CERT__succeeds)
+{
+    ///arrange
+    void* out_result;
+    TLSIO_OPTIONS_RESULT result;
+
+    ///act
+    result = tlsio_options_clone_option(OPTION_TRUSTED_CERT, fake_trusted_cert, &out_result);
+
+    ///assert
+    ASSERT_COPIED_STRING((const char*)out_result, fake_trusted_cert);
+    ASSERT_ARE_EQUAL(int, (int)result, (int)TLSIO_OPTIONS_RESULT_SUCCESS);
+
+    ///clean
+    free(out_result);
+}
+
+TEST_FUNCTION(tlsio_options__clone_option_SU_OPTION_X509_CERT__succeeds)
+{
+    ///arrange
+    void* out_result;
+    TLSIO_OPTIONS_RESULT result;
+
+    ///act
+    result = tlsio_options_clone_option(SU_OPTION_X509_CERT, fake_trusted_cert, &out_result);
+
+    ///assert
+    ASSERT_COPIED_STRING((const char*)out_result, fake_trusted_cert);
+    ASSERT_ARE_EQUAL(int, (int)result, (int)TLSIO_OPTIONS_RESULT_SUCCESS);
+
+    ///clean
+    free(out_result);
+}
+
+TEST_FUNCTION(tlsio_options__clone_option_SU_OPTION_X509_PRIVATE_KEY__succeeds)
+{
+    ///arrange
+    void* out_result;
+    TLSIO_OPTIONS_RESULT result;
+
+    ///act
+    result = tlsio_options_clone_option(SU_OPTION_X509_PRIVATE_KEY, fake_trusted_cert, &out_result);
+
+    ///assert
+    ASSERT_COPIED_STRING((const char*)out_result, fake_trusted_cert);
+    ASSERT_ARE_EQUAL(int, (int)result, (int)TLSIO_OPTIONS_RESULT_SUCCESS);
+
+    ///clean
+    free(out_result);
+}
+
+TEST_FUNCTION(tlsio_options__clone_option_OPTION_X509_ECC_CERT__succeeds)
+{
+    ///arrange
+    void* out_result;
+    TLSIO_OPTIONS_RESULT result;
+
+    ///act
+    result = tlsio_options_clone_option(OPTION_X509_ECC_CERT, fake_trusted_cert, &out_result);
+
+    ///assert
+    ASSERT_COPIED_STRING((const char*)out_result, fake_trusted_cert);
+    ASSERT_ARE_EQUAL(int, (int)result, (int)TLSIO_OPTIONS_RESULT_SUCCESS);
+
+    ///clean
+    free(out_result);
+}
+
+TEST_FUNCTION(tlsio_options__clone_option_OPTION_X509_ECC_KEY__succeeds)
+{
+    ///arrange
+    void* out_result;
+    TLSIO_OPTIONS_RESULT result;
+
+    ///act
+    result = tlsio_options_clone_option(OPTION_X509_ECC_KEY, fake_trusted_cert, &out_result);
+
+    ///assert
+    ASSERT_COPIED_STRING((const char*)out_result, fake_trusted_cert);
+    ASSERT_ARE_EQUAL(int, (int)result, (int)TLSIO_OPTIONS_RESULT_SUCCESS);
+
+    ///clean
+    free(out_result);
+}
+
+TEST_FUNCTION(tlsio_options__clone_option_malloc_fail__fails)
+{
+    int i;
+    int k = 0;
+    const char* p0[SET_NOT_SUPPORTED_COUNT];
+
+    p0[k] = OPTION_TRUSTED_CERT; /*  */ k++;
+    p0[k] = SU_OPTION_X509_CERT; /*  */ k++;
+    p0[k] = SU_OPTION_X509_PRIVATE_KEY; k++;
+    p0[k] = OPTION_X509_ECC_CERT; /* */ k++;
+    p0[k] = OPTION_X509_ECC_KEY; /*  */ k++;
+    use_negative_mocks();
+
+    STRICT_EXPECTED_CALL(gballoc_malloc(IGNORED_NUM_ARG));  // concrete_io struct
+    umock_c_negative_tests_snapshot();
+
+    // Cycle through each failing combo of parameters
+    for (i = 0; i < SET_NOT_SUPPORTED_COUNT; i++)
+    {
+        ///arrange
+        umock_c_negative_tests_reset();
+        umock_c_negative_tests_fail_call(0);
+
+        void* out_result = NULL;
+        TLSIO_OPTIONS_RESULT result;
+
+        ///act
+        result = tlsio_options_clone_option(p0[i], fake_trusted_cert, &out_result);
+
+        ///assert
+        ASSERT_IS_NULL(out_result);
+        ASSERT_ARE_EQUAL_WITH_MSG(int, (int)result, (int)TLSIO_OPTIONS_RESULT_ERROR, "Unexpected success with malloc failure");
+
+        ///clean
+    }
+    umock_c_negative_tests_deinit();
+}
+
+TEST_FUNCTION(tlsio_options__clone_parameter_validation__fails)
+{
+    int i;
+    int k = 0;
+    const char* p0[SET_PV_COUNT];
+    const char* p1[SET_PV_COUNT];
+    void** p2[SET_PV_COUNT];
+    const char* fm[SET_PV_COUNT];
+
+    TLSIO_OPTIONS_RESULT result;
+    void* result_out;
+
+    p0[k] = NULL; /*          */ p1[k] = fake_x509_key; p2[k] = &result_out; fm[k] = "Unexpected clone_option success when name is NULL"; /* */  k++;
+    p0[k] = OPTION_TRUSTED_CERT; p1[k] = NULL; /*    */ p2[k] = &result_out; fm[k] = "Unexpected clone_option success when option value is NULL"; k++;
+    p0[k] = OPTION_TRUSTED_CERT; p1[k] = fake_x509_key; p2[k] = NULL; /*  */ fm[k] = "Unexpected clone_option success when out_status is NULL"; k++;
+    
+    // Cycle through each failing combo of parameters
+    for (i = 0; i < SET_PV_COUNT; i++)
+    {
+        ///arrange
+
+        ///act
+        result = tlsio_options_clone_option(p0[i], p1[i], p2[i]);
+
+        ///assert
+        ASSERT_ARE_EQUAL_WITH_MSG(int, (int)result, (int)TLSIO_OPTIONS_RESULT_ERROR, "Unexpected success with bad clone parameter");
+
+        ///clean
+    }
+}
 
 END_TEST_SUITE(tlsio_options_unittests)

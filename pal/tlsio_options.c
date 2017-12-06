@@ -115,82 +115,79 @@ TLSIO_OPTIONS_RESULT tlsio_options_destroy_option(const char* name, const void* 
 }
 
 
-void* tlsio_options_clone_option(const char* name, const void* value, TLSIO_OPTIONS_RESULT* out_status)
+TLSIO_OPTIONS_RESULT tlsio_options_clone_option(const char* name, const void* value, void** out_value)
 {
-    void* result;
-    *out_status = TLSIO_OPTIONS_RESULT_ERROR;
+    TLSIO_OPTIONS_RESULT result;
 
-    if (name == NULL || value == NULL || out_status == NULL)
+    if (name == NULL || value == NULL || out_value == NULL)
     {
-        LogError("NULL parameter: name: %p, value: %p, out_status: %p",
-            name, value, out_status);
-        result = NULL;
-        *out_status = TLSIO_OPTIONS_RESULT_ERROR;
+        LogError("NULL parameter: name: %p, value: %p, out_value: %p",
+            name, value, out_value);
+        result = TLSIO_OPTIONS_RESULT_ERROR;
     }
     else if (strcmp(name, OPTION_TRUSTED_CERT) == 0)
     {
-        if (mallocAndStrcpy_s((char**)&result, value) != 0)
+        if (mallocAndStrcpy_s((char**)out_value, value) != 0)
         {
             LogError("unable to mallocAndStrcpy_s TrustedCerts value");
-            result = NULL;
+            result = TLSIO_OPTIONS_RESULT_ERROR;
         }
         else
         {
-            *out_status = TLSIO_OPTIONS_RESULT_SUCCESS;
+            result = TLSIO_OPTIONS_RESULT_SUCCESS;
         }
     }
     else if (strcmp(name, SU_OPTION_X509_CERT) == 0)
     {
-        if (mallocAndStrcpy_s((char**)&result, value) != 0)
+        if (mallocAndStrcpy_s((char**)out_value, value) != 0)
         {
             LogError("unable to mallocAndStrcpy_s x509certificate value");
-            result = NULL;
+            result = TLSIO_OPTIONS_RESULT_ERROR;
         }
         else
         {
-            *out_status = TLSIO_OPTIONS_RESULT_SUCCESS;
+            result = TLSIO_OPTIONS_RESULT_SUCCESS;
         }
     }
     else if (strcmp(name, SU_OPTION_X509_PRIVATE_KEY) == 0)
     {
-        if (mallocAndStrcpy_s((char**)&result, value) != 0)
+        if (mallocAndStrcpy_s((char**)out_value, value) != 0)
         {
             LogError("unable to mallocAndStrcpy_s x509privatekey value");
-            result = NULL;
+            result = TLSIO_OPTIONS_RESULT_ERROR;
         }
         else
         {
-            *out_status = TLSIO_OPTIONS_RESULT_SUCCESS;
+            result = TLSIO_OPTIONS_RESULT_SUCCESS;
         }
     }
     else if (strcmp(name, OPTION_X509_ECC_CERT) == 0)
     {
-        if (mallocAndStrcpy_s((char**)&result, value) != 0)
+        if (mallocAndStrcpy_s((char**)out_value, value) != 0)
         {
             LogError("unable to mallocAndStrcpy_s x509EccCertificate value");
-            result = NULL;
+            result = TLSIO_OPTIONS_RESULT_ERROR;
         }
         else
         {
-            *out_status = TLSIO_OPTIONS_RESULT_SUCCESS;
+            result = TLSIO_OPTIONS_RESULT_SUCCESS;
         }
     }
     else if (strcmp(name, OPTION_X509_ECC_KEY) == 0)
     {
-        if (mallocAndStrcpy_s((char**)&result, value) != 0)
+        if (mallocAndStrcpy_s((char**)out_value, value) != 0)
         {
             LogError("unable to mallocAndStrcpy_s x509EccKey value");
-            result = NULL;
+            result = TLSIO_OPTIONS_RESULT_ERROR;
         }
         else
         {
-            *out_status = TLSIO_OPTIONS_RESULT_SUCCESS;
+            result = TLSIO_OPTIONS_RESULT_SUCCESS;
         }
     }
     else
     {
-        result = NULL;
-        *out_status = TLSIO_OPTIONS_RESULT_NOT_HANDLED;
+        result = TLSIO_OPTIONS_RESULT_NOT_HANDLED;
     }
     return result;
 }

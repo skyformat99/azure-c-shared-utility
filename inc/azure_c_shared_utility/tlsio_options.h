@@ -60,7 +60,7 @@ extern "C" {
     // This should be called in the tlsio destructor
     void tlsio_options_release_resources(TLSIO_OPTIONS* options);
 
-    void* tlsio_options_clone_option(const char* name, const void* value, TLSIO_OPTIONS_RESULT* out_status);
+    TLSIO_OPTIONS_RESULT tlsio_options_clone_option(const char* name, const void* value, void** out_value);
 
     TLSIO_OPTIONS_RESULT tlsio_options_destroy_option(const char* name, const void* value);
 
