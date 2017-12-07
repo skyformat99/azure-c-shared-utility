@@ -10,11 +10,6 @@
 #include "azure_c_shared_utility/crt_abstractions.h"
 
 
-// The tlsio_options helper component is used only as an internal helper to
-// tlsio adapters. As an internal helper it behaves conceptually like
-// internal static functions, and so has the relaxed error checking of other
-// internal statics.
-
 // Initialize the TLSIO_OPTIONS struct
 void tlsio_options_initialize(TLSIO_OPTIONS* options, int supported_options)
 {
