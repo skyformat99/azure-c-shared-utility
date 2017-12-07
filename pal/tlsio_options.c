@@ -76,11 +76,16 @@ static int set_and_validate_x509_type(TLSIO_OPTIONS* options, TLSIO_OPTIONS_x509
 
 void tlsio_options_release_resources(TLSIO_OPTIONS* options)
 {
-    // Using static function rules, so 'options' is not checked for NULL
-    //
-    free((void*)options->trusted_certs);
-    free((void*)options->x509_cert);
-    free((void*)options->x509_key);
+    if (options != NULL)
+    {
+        free((void*)options->trusted_certs);
+        free((void*)options->x509_cert);
+        free((void*)options->x509_key);
+    }
+    else
+    {
+        LogError("NULL options");
+    }
 }
 
 TLSIO_OPTIONS_RESULT tlsio_options_destroy_option(const char* name, const void* value)
