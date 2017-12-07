@@ -87,8 +87,8 @@ static void* tlsio_openssl_CloneOption(const char* name, const void* value)
 {
     void* result;
     void* helper_result;
-    TLSIO_OPTIONS_RESULT helper_status = TLSIO_OPTIONS_RESULT_ERROR;
-    helper_result = tlsio_options_clone_option(name, value, &helper_status);
+    TLSIO_OPTIONS_RESULT helper_status;
+    helper_status = tlsio_options_clone_option(name, value, &helper_result);
     if (helper_status == TLSIO_OPTIONS_RESULT_SUCCESS)
     {
         result = helper_result;
