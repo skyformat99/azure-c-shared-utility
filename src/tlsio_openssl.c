@@ -203,7 +203,7 @@ static OPTIONHANDLER_HANDLE tlsio_openssl_retrieveoptions(CONCRETE_IO_HANDLE han
             tlsio_openssl_CloneOption, tlsio_openssl_DestroyOption, tlsio_openssl_setoption);
         if (result == NULL)
         {
-            // The tlsio_options_retrieve_options helper did the error logging
+            LogError("unable to OptionHandler_Create");
             /*return as is*/
         }
         else

@@ -218,30 +218,33 @@ TLSIO_OPTIONS_RESULT tlsio_options_set(TLSIO_OPTIONS* options,
         {
             if (options->trusted_certs != NULL)
             {
-                // Free the memory if it has been previously allocated
-                free((void*)options->trusted_certs);
-            }
-
-            // Store the certificate
-            if (mallocAndStrcpy_s((char**)&options->trusted_certs, value) != 0)
-            {
-                LogError("unable to mallocAndStrcpy_s");
+                LogError("unable to set trusted cert option more than once");
                 result = TLSIO_OPTIONS_RESULT_ERROR;
             }
             else
             {
-                result = TLSIO_OPTIONS_RESULT_SUCCESS;
+                // Store the certificate
+                if (mallocAndStrcpy_s((char**)&options->trusted_certs, value) != 0)
+                {
+                    LogError("unable to mallocAndStrcpy_s trusted cert value");
+                    result = TLSIO_OPTIONS_RESULT_ERROR;
+                }
+                else
+                {
+                    result = TLSIO_OPTIONS_RESULT_SUCCESS;
+                }
             }
         }
     }
-    else if (strcmp(SU_OPTION_X509_CERT, optionName) == 0)
+    else if (strcmp(SU_OPTION_X509_CERT, optionName) == 0 || strcmp(OPTION_X509_ECC_CERT, optionName) == 0)
     {
+        TLSIO_OPTIONS_x509_TYPE this_type = (strcmp(SU_OPTION_X509_CERT, optionName) == 0) ? TLSIO_OPTIONS_x509_TYPE_STANDARD : TLSIO_OPTIONS_x509_TYPE_ECC;
         if (options->x509_cert != NULL)
         {
             LogError("unable to set x509 options more than once");
             result = TLSIO_OPTIONS_RESULT_ERROR;
         }
-        else if (set_and_validate_x509_type(options, TLSIO_OPTIONS_x509_TYPE_STANDARD) != 0)
+        else if (set_and_validate_x509_type(options, this_type) != 0)
         {
             // Error logged by helper
             result = TLSIO_OPTIONS_RESULT_ERROR;
@@ -251,7 +254,7 @@ TLSIO_OPTIONS_RESULT tlsio_options_set(TLSIO_OPTIONS* options,
             /*let's make a copy of this option*/
             if (mallocAndStrcpy_s((char**)&options->x509_cert, value) != 0)
             {
-                LogError("unable to mallocAndStrcpy_s");
+                LogError("unable to mallocAndStrcpy_s x509 cert value");
                 result = TLSIO_OPTIONS_RESULT_ERROR;
             }
             else
@@ -260,14 +263,15 @@ TLSIO_OPTIONS_RESULT tlsio_options_set(TLSIO_OPTIONS* options,
             }
         }
     }
-    else if (strcmp(SU_OPTION_X509_PRIVATE_KEY, optionName) == 0)
+    else if (strcmp(SU_OPTION_X509_PRIVATE_KEY, optionName) == 0 || strcmp(OPTION_X509_ECC_KEY, optionName) == 0)
     {
+        TLSIO_OPTIONS_x509_TYPE this_type = (strcmp(SU_OPTION_X509_PRIVATE_KEY, optionName) == 0) ? TLSIO_OPTIONS_x509_TYPE_STANDARD : TLSIO_OPTIONS_x509_TYPE_ECC;
         if (options->x509_key != NULL)
         {
             LogError("unable to set x509 options more than once");
             result = TLSIO_OPTIONS_RESULT_ERROR;
         }
-        else if (set_and_validate_x509_type(options, TLSIO_OPTIONS_x509_TYPE_STANDARD) != 0)
+        else if (set_and_validate_x509_type(options, this_type) != 0)
         {
             // Error logged by helper
             result = TLSIO_OPTIONS_RESULT_ERROR;
@@ -277,59 +281,7 @@ TLSIO_OPTIONS_RESULT tlsio_options_set(TLSIO_OPTIONS* options,
             /*let's make a copy of this option*/
             if (mallocAndStrcpy_s((char**)&options->x509_key, value) != 0)
             {
-                LogError("unable to mallocAndStrcpy_s");
-                result = TLSIO_OPTIONS_RESULT_ERROR;
-            }
-            else
-            {
-                result = TLSIO_OPTIONS_RESULT_SUCCESS;
-            }
-        }
-    }
-    else if (strcmp(OPTION_X509_ECC_CERT, optionName) == 0)
-    {
-        if (options->x509_cert != NULL)
-        {
-            LogError("unable to set x509 options more than once");
-            result = TLSIO_OPTIONS_RESULT_ERROR;
-        }
-        else if (set_and_validate_x509_type(options, TLSIO_OPTIONS_x509_TYPE_ECC) != 0)
-        {
-            // Error logged by helper
-            result = TLSIO_OPTIONS_RESULT_ERROR;
-        }
-        else
-        {
-            /*let's make a copy of this option*/
-            if (mallocAndStrcpy_s((char**)&options->x509_cert, value) != 0)
-            {
-                LogError("unable to mallocAndStrcpy_s");
-                result = TLSIO_OPTIONS_RESULT_ERROR;
-            }
-            else
-            {
-                result = TLSIO_OPTIONS_RESULT_SUCCESS;
-            }
-        }
-    }
-    else if (strcmp(OPTION_X509_ECC_KEY, optionName) == 0)
-    {
-        if (options->x509_key != NULL)
-        {
-            LogError("unable to set x509 options more than once");
-            result = TLSIO_OPTIONS_RESULT_ERROR;
-        }
-        else if (set_and_validate_x509_type(options, TLSIO_OPTIONS_x509_TYPE_ECC) != 0)
-        {
-            // Error logged by helper
-            result = TLSIO_OPTIONS_RESULT_ERROR;
-        }
-        else
-        {
-            /*let's make a copy of this option*/
-            if (mallocAndStrcpy_s((char**)&options->x509_key, value) != 0)
-            {
-                LogError("unable to mallocAndStrcpy_s");
+                LogError("unable to mallocAndStrcpy_s x509 key value");
                 result = TLSIO_OPTIONS_RESULT_ERROR;
             }
             else
