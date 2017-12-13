@@ -54,18 +54,25 @@ extern "C" {
     // is understood to go with the cert.
     void tlsio_options_initialize(TLSIO_OPTIONS* options, int option_caps);
 
-    TLSIO_OPTIONS_RESULT tlsio_options_set(TLSIO_OPTIONS* options,  
-        const char* optionName, const void* value);
-
     // This should be called in the tlsio destructor
     void tlsio_options_release_resources(TLSIO_OPTIONS* options);
 
+    // xio requires the implementation of four functions: xio_setoption, xio_retrieveoptions,
+    // an anonymous clone_option, and an anonymous destroy_option.
+
+    // The helper for xio_setoption
+    TLSIO_OPTIONS_RESULT tlsio_options_set(TLSIO_OPTIONS* options,  
+        const char* optionName, const void* value);
+
+    // The helper for xio_retrieveoptions
+    OPTIONHANDLER_HANDLE tlsio_options_retrieve_options(TLSIO_OPTIONS* options,
+        pfCloneOption cloneOption, pfDestroyOption destroyOption, pfSetOption setOption);
+
+    // The helper for the anonymous clone_option
     TLSIO_OPTIONS_RESULT tlsio_options_clone_option(const char* name, const void* value, void** out_value);
 
+    // The helper for the anonymous destroy_option
     TLSIO_OPTIONS_RESULT tlsio_options_destroy_option(const char* name, const void* value);
-
-    OPTIONHANDLER_HANDLE tlsio_options_retrieve_options(TLSIO_OPTIONS* options, 
-        pfCloneOption cloneOption, pfDestroyOption destroyOption, pfSetOption setOption);
 
 
 #ifdef __cplusplus
