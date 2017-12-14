@@ -132,13 +132,13 @@ TEST_FUNCTION(tlsio_options_initialize__succeeds)
     memset(&options, 0xff, sizeof(options));
 
     ///act
-    tlsio_options_initialize(&options, TLSIO_OPTION_BIT_TRUSTED_CERTS | TLSIO_OPTION_BIT_x509_CERT | TLSIO_OPTION_BIT_x509_ECC_CERT);
+    tlsio_options_initialize(&options, TLSIO_OPTION_BIT_TRUSTED_CERTS | TLSIO_OPTION_BIT_x509_RSA_CERT | TLSIO_OPTION_BIT_x509_ECC_CERT);
 
     ///assert
     ASSERT_IS_NULL(options.trusted_certs);
     ASSERT_IS_NULL(options.x509_cert);
     ASSERT_IS_NULL(options.x509_key);
-    ASSERT_ARE_EQUAL(int, options.supported_options, (int)(TLSIO_OPTION_BIT_TRUSTED_CERTS | TLSIO_OPTION_BIT_x509_CERT | TLSIO_OPTION_BIT_x509_ECC_CERT));
+    ASSERT_ARE_EQUAL(int, options.supported_options, (int)(TLSIO_OPTION_BIT_TRUSTED_CERTS | TLSIO_OPTION_BIT_x509_RSA_CERT | TLSIO_OPTION_BIT_x509_ECC_CERT));
     ASSERT_ARE_EQUAL(int, (int)options.x509_type, (int)TLSIO_OPTIONS_x509_TYPE_UNSPECIFIED);
 
     ///clean
@@ -172,7 +172,7 @@ TEST_FUNCTION(tlsio_options__set_x509_certs__succeeds)
     ///arrange
     TLSIO_OPTIONS_RESULT result;
     TLSIO_OPTIONS options;
-    tlsio_options_initialize(&options, TLSIO_OPTION_BIT_x509_CERT);
+    tlsio_options_initialize(&options, TLSIO_OPTION_BIT_x509_RSA_CERT);
 
     ///act
     result = tlsio_options_set(&options, SU_OPTION_X509_CERT, fake_x509_cert);
@@ -181,8 +181,8 @@ TEST_FUNCTION(tlsio_options__set_x509_certs__succeeds)
     ASSERT_IS_NULL(options.trusted_certs);
     ASSERT_COPIED_STRING(options.x509_cert, fake_x509_cert);
     ASSERT_IS_NULL(options.x509_key);
-    ASSERT_ARE_EQUAL(int, options.supported_options, (int)(TLSIO_OPTION_BIT_x509_CERT));
-    ASSERT_ARE_EQUAL(int, (int)options.x509_type, (int)TLSIO_OPTIONS_x509_TYPE_STANDARD);
+    ASSERT_ARE_EQUAL(int, options.supported_options, (int)(TLSIO_OPTION_BIT_x509_RSA_CERT));
+    ASSERT_ARE_EQUAL(int, (int)options.x509_type, (int)TLSIO_OPTIONS_x509_TYPE_RSA);
     ASSERT_ARE_EQUAL(int, (int)result, 0);
 
     ///clean
@@ -218,7 +218,7 @@ TEST_FUNCTION(tlsio_options__set_x509_key__succeeds)
     ///arrange
     TLSIO_OPTIONS_RESULT result;
     TLSIO_OPTIONS options;
-    tlsio_options_initialize(&options, TLSIO_OPTION_BIT_x509_CERT);
+    tlsio_options_initialize(&options, TLSIO_OPTION_BIT_x509_RSA_CERT);
 
     ///act
     result = tlsio_options_set(&options, SU_OPTION_X509_PRIVATE_KEY, fake_x509_key);
@@ -227,8 +227,8 @@ TEST_FUNCTION(tlsio_options__set_x509_key__succeeds)
     ASSERT_IS_NULL(options.trusted_certs);
     ASSERT_IS_NULL(options.x509_cert);
     ASSERT_COPIED_STRING(options.x509_key, fake_x509_key);
-    ASSERT_ARE_EQUAL(int, options.supported_options, (int)(TLSIO_OPTION_BIT_x509_CERT));
-    ASSERT_ARE_EQUAL(int, (int)options.x509_type, (int)TLSIO_OPTIONS_x509_TYPE_STANDARD);
+    ASSERT_ARE_EQUAL(int, options.supported_options, (int)(TLSIO_OPTION_BIT_x509_RSA_CERT));
+    ASSERT_ARE_EQUAL(int, (int)options.x509_type, (int)TLSIO_OPTIONS_x509_TYPE_RSA);
     ASSERT_ARE_EQUAL(int, (int)result, 0);
 
     ///clean
@@ -348,7 +348,7 @@ TEST_FUNCTION(tlsio_options__set_x509_bad_combos__fails)
     for (i = 0; i < SET_INCONSISTENT_x509_COUNT; i++)
     {
         ///arrange
-        tlsio_options_initialize(&options, TLSIO_OPTION_BIT_TRUSTED_CERTS | TLSIO_OPTION_BIT_x509_CERT | TLSIO_OPTION_BIT_x509_ECC_CERT);
+        tlsio_options_initialize(&options, TLSIO_OPTION_BIT_TRUSTED_CERTS | TLSIO_OPTION_BIT_x509_RSA_CERT | TLSIO_OPTION_BIT_x509_ECC_CERT);
         result = tlsio_options_set(&options, p0[i], fake_x509_key);
         ASSERT_ARE_EQUAL(int, (int)result, (int)TLSIO_OPTIONS_RESULT_SUCCESS);
 
@@ -424,7 +424,7 @@ TEST_FUNCTION(tlsio_options__set_malloc_fail__fails)
         umock_c_negative_tests_reset();
         umock_c_negative_tests_fail_call(0);
 
-        tlsio_options_initialize(&options, TLSIO_OPTION_BIT_TRUSTED_CERTS | TLSIO_OPTION_BIT_x509_CERT | TLSIO_OPTION_BIT_x509_ECC_CERT);
+        tlsio_options_initialize(&options, TLSIO_OPTION_BIT_TRUSTED_CERTS | TLSIO_OPTION_BIT_x509_RSA_CERT | TLSIO_OPTION_BIT_x509_ECC_CERT);
 
         ///act
         result = tlsio_options_set(&options, p0[i], fake_x509_key);
@@ -444,7 +444,7 @@ TEST_FUNCTION(tlsio_options__release_resources__succeeds)
     ///arrange
     TLSIO_OPTIONS_RESULT result;
     TLSIO_OPTIONS options;
-    tlsio_options_initialize(&options, TLSIO_OPTION_BIT_TRUSTED_CERTS | TLSIO_OPTION_BIT_x509_CERT);
+    tlsio_options_initialize(&options, TLSIO_OPTION_BIT_TRUSTED_CERTS | TLSIO_OPTION_BIT_x509_RSA_CERT);
     result = tlsio_options_set(&options, OPTION_TRUSTED_CERT, fake_trusted_cert);
     result = tlsio_options_set(&options, SU_OPTION_X509_CERT, fake_x509_cert);
     result = tlsio_options_set(&options, SU_OPTION_X509_PRIVATE_KEY, fake_x509_key);
@@ -651,24 +651,24 @@ TEST_FUNCTION(tlsio_options__clone_malloc_fail__fails)
     umock_c_negative_tests_deinit();
 }
 
-TEST_FUNCTION(tlsio_options__retrieve_OPTION_TRUSTED_CERT__succeeds)
+TEST_FUNCTION(tlsio_options__retrieve_ex_OPTION_TRUSTED_CERT__succeeds)
 {
     ///arrange
     TLSIO_OPTIONS options;
     TLSIO_OPTIONS_RESULT set_result;
     OPTIONHANDLER_RESULT option_handler_result;
     OPTIONHANDLER_HANDLE result = NULL;
-    tlsio_options_initialize(&options, TLSIO_OPTION_BIT_TRUSTED_CERTS | TLSIO_OPTION_BIT_x509_CERT | TLSIO_OPTION_BIT_x509_ECC_CERT);
+    tlsio_options_initialize(&options, TLSIO_OPTION_BIT_TRUSTED_CERTS | TLSIO_OPTION_BIT_x509_RSA_CERT | TLSIO_OPTION_BIT_x509_ECC_CERT);
     set_result = tlsio_options_set(&options, OPTION_TRUSTED_CERT, fake_trusted_cert);
     ASSERT_ARE_EQUAL(int, (int)set_result, (int)TLSIO_OPTIONS_RESULT_SUCCESS);
 
     ///act
-    result = tlsio_options_retrieve_options(&options, pfCloneOption_impl, tlsio_options_destroy_option, pfSetOption_impl);
+    result = tlsio_options_retrieve_options_ex(&options, pfCloneOption_impl, tlsio_options_destroy_option, pfSetOption_impl);
 
     ///assert
     ASSERT_IS_NOT_NULL(result);
     tlsio_options_release_resources(&options);
-    tlsio_options_initialize(&options, TLSIO_OPTION_BIT_TRUSTED_CERTS | TLSIO_OPTION_BIT_x509_CERT | TLSIO_OPTION_BIT_x509_ECC_CERT);
+    tlsio_options_initialize(&options, TLSIO_OPTION_BIT_TRUSTED_CERTS | TLSIO_OPTION_BIT_x509_RSA_CERT | TLSIO_OPTION_BIT_x509_ECC_CERT);
 
     option_handler_result = OptionHandler_FeedOptions(result, &options);
     ASSERT_ARE_EQUAL(int, (int)option_handler_result, (int)OPTIONHANDLER_OK);
@@ -682,30 +682,30 @@ TEST_FUNCTION(tlsio_options__retrieve_OPTION_TRUSTED_CERT__succeeds)
     assert_gballoc_checks();
 }
 
-TEST_FUNCTION(tlsio_options__retrieve_SU_OPTION_X509_CERT__succeeds)
+TEST_FUNCTION(tlsio_options__retrieve_ex_SU_OPTION_X509_CERT__succeeds)
 {
     ///arrange
     TLSIO_OPTIONS options;
     TLSIO_OPTIONS_RESULT set_result;
     OPTIONHANDLER_RESULT option_handler_result;
     OPTIONHANDLER_HANDLE result = NULL;
-    tlsio_options_initialize(&options, TLSIO_OPTION_BIT_TRUSTED_CERTS | TLSIO_OPTION_BIT_x509_CERT | TLSIO_OPTION_BIT_x509_ECC_CERT);
+    tlsio_options_initialize(&options, TLSIO_OPTION_BIT_TRUSTED_CERTS | TLSIO_OPTION_BIT_x509_RSA_CERT | TLSIO_OPTION_BIT_x509_ECC_CERT);
     set_result = tlsio_options_set(&options, SU_OPTION_X509_CERT, fake_trusted_cert);
     ASSERT_ARE_EQUAL(int, (int)set_result, (int)TLSIO_OPTIONS_RESULT_SUCCESS);
 
     ///act
-    result = tlsio_options_retrieve_options(&options, pfCloneOption_impl, tlsio_options_destroy_option, pfSetOption_impl);
+    result = tlsio_options_retrieve_options_ex(&options, pfCloneOption_impl, tlsio_options_destroy_option, pfSetOption_impl);
 
     ///assert
     ASSERT_IS_NOT_NULL(result);
     tlsio_options_release_resources(&options);
-    tlsio_options_initialize(&options, TLSIO_OPTION_BIT_TRUSTED_CERTS | TLSIO_OPTION_BIT_x509_CERT | TLSIO_OPTION_BIT_x509_ECC_CERT);
+    tlsio_options_initialize(&options, TLSIO_OPTION_BIT_TRUSTED_CERTS | TLSIO_OPTION_BIT_x509_RSA_CERT | TLSIO_OPTION_BIT_x509_ECC_CERT);
 
     option_handler_result = OptionHandler_FeedOptions(result, &options);
     ASSERT_ARE_EQUAL(int, (int)option_handler_result, (int)OPTIONHANDLER_OK);
 
     ASSERT_COPIED_STRING(options.x509_cert, fake_trusted_cert);
-    ASSERT_ARE_EQUAL(int, (int)options.x509_type, (int)TLSIO_OPTIONS_x509_TYPE_STANDARD);
+    ASSERT_ARE_EQUAL(int, (int)options.x509_type, (int)TLSIO_OPTIONS_x509_TYPE_RSA);
 
     ///clean
     tlsio_options_release_resources(&options);
@@ -713,30 +713,30 @@ TEST_FUNCTION(tlsio_options__retrieve_SU_OPTION_X509_CERT__succeeds)
     assert_gballoc_checks();
 }
 
-TEST_FUNCTION(tlsio_options__retrieve_SU_OPTION_X509_PRIVATE_KEY__succeeds)
+TEST_FUNCTION(tlsio_options__retrieve_ex_SU_OPTION_X509_PRIVATE_KEY__succeeds)
 {
     ///arrange
     TLSIO_OPTIONS options;
     TLSIO_OPTIONS_RESULT set_result;
     OPTIONHANDLER_RESULT option_handler_result;
     OPTIONHANDLER_HANDLE result = NULL;
-    tlsio_options_initialize(&options, TLSIO_OPTION_BIT_TRUSTED_CERTS | TLSIO_OPTION_BIT_x509_CERT | TLSIO_OPTION_BIT_x509_ECC_CERT);
+    tlsio_options_initialize(&options, TLSIO_OPTION_BIT_TRUSTED_CERTS | TLSIO_OPTION_BIT_x509_RSA_CERT | TLSIO_OPTION_BIT_x509_ECC_CERT);
     set_result = tlsio_options_set(&options, SU_OPTION_X509_PRIVATE_KEY, fake_trusted_cert);
     ASSERT_ARE_EQUAL(int, (int)set_result, (int)TLSIO_OPTIONS_RESULT_SUCCESS);
 
     ///act
-    result = tlsio_options_retrieve_options(&options, pfCloneOption_impl, tlsio_options_destroy_option, pfSetOption_impl);
+    result = tlsio_options_retrieve_options_ex(&options, pfCloneOption_impl, tlsio_options_destroy_option, pfSetOption_impl);
 
     ///assert
     ASSERT_IS_NOT_NULL(result);
     tlsio_options_release_resources(&options);
-    tlsio_options_initialize(&options, TLSIO_OPTION_BIT_TRUSTED_CERTS | TLSIO_OPTION_BIT_x509_CERT | TLSIO_OPTION_BIT_x509_ECC_CERT);
+    tlsio_options_initialize(&options, TLSIO_OPTION_BIT_TRUSTED_CERTS | TLSIO_OPTION_BIT_x509_RSA_CERT | TLSIO_OPTION_BIT_x509_ECC_CERT);
 
     option_handler_result = OptionHandler_FeedOptions(result, &options);
     ASSERT_ARE_EQUAL(int, (int)option_handler_result, (int)OPTIONHANDLER_OK);
 
     ASSERT_COPIED_STRING(options.x509_key, fake_trusted_cert);
-    ASSERT_ARE_EQUAL(int, (int)options.x509_type, (int)TLSIO_OPTIONS_x509_TYPE_STANDARD);
+    ASSERT_ARE_EQUAL(int, (int)options.x509_type, (int)TLSIO_OPTIONS_x509_TYPE_RSA);
 
     ///clean
     tlsio_options_release_resources(&options);
@@ -744,24 +744,24 @@ TEST_FUNCTION(tlsio_options__retrieve_SU_OPTION_X509_PRIVATE_KEY__succeeds)
     assert_gballoc_checks();
 }
 
-TEST_FUNCTION(tlsio_options__retrieve_OPTION_X509_ECC_CERT__succeeds)
+TEST_FUNCTION(tlsio_options__retrieve_ex_OPTION_X509_ECC_CERT__succeeds)
 {
     ///arrange
     TLSIO_OPTIONS options;
     TLSIO_OPTIONS_RESULT set_result;
     OPTIONHANDLER_RESULT option_handler_result;
     OPTIONHANDLER_HANDLE result = NULL;
-    tlsio_options_initialize(&options, TLSIO_OPTION_BIT_TRUSTED_CERTS | TLSIO_OPTION_BIT_x509_CERT | TLSIO_OPTION_BIT_x509_ECC_CERT);
+    tlsio_options_initialize(&options, TLSIO_OPTION_BIT_TRUSTED_CERTS | TLSIO_OPTION_BIT_x509_RSA_CERT | TLSIO_OPTION_BIT_x509_ECC_CERT);
     set_result = tlsio_options_set(&options, OPTION_X509_ECC_CERT, fake_trusted_cert);
     ASSERT_ARE_EQUAL(int, (int)set_result, (int)TLSIO_OPTIONS_RESULT_SUCCESS);
 
     ///act
-    result = tlsio_options_retrieve_options(&options, pfCloneOption_impl, tlsio_options_destroy_option, pfSetOption_impl);
+    result = tlsio_options_retrieve_options_ex(&options, pfCloneOption_impl, tlsio_options_destroy_option, pfSetOption_impl);
 
     ///assert
     ASSERT_IS_NOT_NULL(result);
     tlsio_options_release_resources(&options);
-    tlsio_options_initialize(&options, TLSIO_OPTION_BIT_TRUSTED_CERTS | TLSIO_OPTION_BIT_x509_CERT | TLSIO_OPTION_BIT_x509_ECC_CERT);
+    tlsio_options_initialize(&options, TLSIO_OPTION_BIT_TRUSTED_CERTS | TLSIO_OPTION_BIT_x509_RSA_CERT | TLSIO_OPTION_BIT_x509_ECC_CERT);
 
     option_handler_result = OptionHandler_FeedOptions(result, &options);
     ASSERT_ARE_EQUAL(int, (int)option_handler_result, (int)OPTIONHANDLER_OK);
@@ -775,24 +775,24 @@ TEST_FUNCTION(tlsio_options__retrieve_OPTION_X509_ECC_CERT__succeeds)
     assert_gballoc_checks();
 }
 
-TEST_FUNCTION(tlsio_options__retrieve_OPTION_X509_ECC_KEY__succeeds)
+TEST_FUNCTION(tlsio_options__retrieve_ex_OPTION_X509_ECC_KEY__succeeds)
 {
     ///arrange
     TLSIO_OPTIONS options;
     TLSIO_OPTIONS_RESULT set_result;
     OPTIONHANDLER_RESULT option_handler_result;
     OPTIONHANDLER_HANDLE result = NULL;
-    tlsio_options_initialize(&options, TLSIO_OPTION_BIT_TRUSTED_CERTS | TLSIO_OPTION_BIT_x509_CERT | TLSIO_OPTION_BIT_x509_ECC_CERT);
+    tlsio_options_initialize(&options, TLSIO_OPTION_BIT_TRUSTED_CERTS | TLSIO_OPTION_BIT_x509_RSA_CERT | TLSIO_OPTION_BIT_x509_ECC_CERT);
     set_result = tlsio_options_set(&options, OPTION_X509_ECC_KEY, fake_trusted_cert);
     ASSERT_ARE_EQUAL(int, (int)set_result, (int)TLSIO_OPTIONS_RESULT_SUCCESS);
 
     ///act
-    result = tlsio_options_retrieve_options(&options, pfCloneOption_impl, tlsio_options_destroy_option, pfSetOption_impl);
+    result = tlsio_options_retrieve_options_ex(&options, pfCloneOption_impl, tlsio_options_destroy_option, pfSetOption_impl);
 
     ///assert
     ASSERT_IS_NOT_NULL(result);
     tlsio_options_release_resources(&options);
-    tlsio_options_initialize(&options, TLSIO_OPTION_BIT_TRUSTED_CERTS | TLSIO_OPTION_BIT_x509_CERT | TLSIO_OPTION_BIT_x509_ECC_CERT);
+    tlsio_options_initialize(&options, TLSIO_OPTION_BIT_TRUSTED_CERTS | TLSIO_OPTION_BIT_x509_RSA_CERT | TLSIO_OPTION_BIT_x509_ECC_CERT);
 
     option_handler_result = OptionHandler_FeedOptions(result, &options);
     ASSERT_ARE_EQUAL(int, (int)option_handler_result, (int)OPTIONHANDLER_OK);
@@ -806,7 +806,7 @@ TEST_FUNCTION(tlsio_options__retrieve_OPTION_X509_ECC_KEY__succeeds)
     assert_gballoc_checks();
 }
 
-TEST_FUNCTION(tlsio_options__retrieve_parameter_validation__fails)
+TEST_FUNCTION(tlsio_options__retrieve_ex_parameter_validation__fails)
 {
     int i;
     int k = 0;
@@ -827,12 +827,12 @@ TEST_FUNCTION(tlsio_options__retrieve_parameter_validation__fails)
         ///arrange
         TLSIO_OPTIONS_RESULT set_result;
         OPTIONHANDLER_HANDLE result = NULL;
-        tlsio_options_initialize(&options, TLSIO_OPTION_BIT_TRUSTED_CERTS | TLSIO_OPTION_BIT_x509_CERT | TLSIO_OPTION_BIT_x509_ECC_CERT);
+        tlsio_options_initialize(&options, TLSIO_OPTION_BIT_TRUSTED_CERTS | TLSIO_OPTION_BIT_x509_RSA_CERT | TLSIO_OPTION_BIT_x509_ECC_CERT);
         set_result = tlsio_options_set(&options, OPTION_X509_ECC_KEY, fake_trusted_cert);
         ASSERT_ARE_EQUAL(int, (int)set_result, (int)TLSIO_OPTIONS_RESULT_SUCCESS);
 
         ///act
-        result = tlsio_options_retrieve_options(p0[i], p1[i], p2[i], p3[i]);
+        result = tlsio_options_retrieve_options_ex(p0[i], p1[i], p2[i], p3[i]);
 
         ///assert
         ASSERT_IS_NULL_WITH_MSG(result, "Unexpected success with bad retrieve parameter");
@@ -842,7 +842,7 @@ TEST_FUNCTION(tlsio_options__retrieve_parameter_validation__fails)
     }
 }
 
-TEST_FUNCTION(tlsio_options__retrieve_OptionHandler_Create_fail__fails)
+TEST_FUNCTION(tlsio_options__retrieve_ex_OptionHandler_Create_fail__fails)
 {
     int i;
     int k = 0;
@@ -866,7 +866,7 @@ TEST_FUNCTION(tlsio_options__retrieve_OptionHandler_Create_fail__fails)
     for (i = 0; i < SET_NOT_SUPPORTED_COUNT; i++)
     {
         ///arrange
-        tlsio_options_initialize(&options, TLSIO_OPTION_BIT_TRUSTED_CERTS | TLSIO_OPTION_BIT_x509_CERT | TLSIO_OPTION_BIT_x509_ECC_CERT);
+        tlsio_options_initialize(&options, TLSIO_OPTION_BIT_TRUSTED_CERTS | TLSIO_OPTION_BIT_x509_RSA_CERT | TLSIO_OPTION_BIT_x509_ECC_CERT);
         set_result = tlsio_options_set(&options, p0[i], fake_x509_key);
         ASSERT_ARE_EQUAL(int, (int)set_result, (int)TLSIO_OPTIONS_RESULT_SUCCESS);
 
@@ -874,7 +874,7 @@ TEST_FUNCTION(tlsio_options__retrieve_OptionHandler_Create_fail__fails)
         umock_c_negative_tests_fail_call(0);
 
         ///act
-        result = tlsio_options_retrieve_options(&options, pfCloneOption_impl, tlsio_options_destroy_option, pfSetOption_impl);
+        result = tlsio_options_retrieve_options_ex(&options, pfCloneOption_impl, tlsio_options_destroy_option, pfSetOption_impl);
 
         ///assert
         ASSERT_IS_NULL_WITH_MSG(result, "Unexpected success with OptionHandler_Create failure");
@@ -886,7 +886,7 @@ TEST_FUNCTION(tlsio_options__retrieve_OptionHandler_Create_fail__fails)
     umock_c_negative_tests_deinit();
 }
 
-TEST_FUNCTION(tlsio_options__retrieve_OptionHandler_AddOption_fail__fails)
+TEST_FUNCTION(tlsio_options__retrieve_ex_OptionHandler_AddOption_fail__fails)
 {
     int i;
     int k = 0;
@@ -912,7 +912,7 @@ TEST_FUNCTION(tlsio_options__retrieve_OptionHandler_AddOption_fail__fails)
     for (i = 0; i < SET_NOT_SUPPORTED_COUNT; i++)
     {
         ///arrange
-        tlsio_options_initialize(&options, TLSIO_OPTION_BIT_TRUSTED_CERTS | TLSIO_OPTION_BIT_x509_CERT | TLSIO_OPTION_BIT_x509_ECC_CERT);
+        tlsio_options_initialize(&options, TLSIO_OPTION_BIT_TRUSTED_CERTS | TLSIO_OPTION_BIT_x509_RSA_CERT | TLSIO_OPTION_BIT_x509_ECC_CERT);
         set_result = tlsio_options_set(&options, p0[i], fake_x509_key);
         ASSERT_ARE_EQUAL(int, (int)set_result, (int)TLSIO_OPTIONS_RESULT_SUCCESS);
 
@@ -920,7 +920,7 @@ TEST_FUNCTION(tlsio_options__retrieve_OptionHandler_AddOption_fail__fails)
         umock_c_negative_tests_fail_call(2);
 
         ///act
-        result = tlsio_options_retrieve_options(&options, pfCloneOption_impl, tlsio_options_destroy_option, pfSetOption_impl);
+        result = tlsio_options_retrieve_options_ex(&options, pfCloneOption_impl, tlsio_options_destroy_option, pfSetOption_impl);
 
         ///assert
         ASSERT_IS_NULL_WITH_MSG(result, "Unexpected success with OptionHandler_Create failure");
@@ -930,6 +930,39 @@ TEST_FUNCTION(tlsio_options__retrieve_OptionHandler_AddOption_fail__fails)
         assert_gballoc_checks();
     }
     umock_c_negative_tests_deinit();
+}
+
+// The tlsio_options_retrieve_options is a simple pass-through to tlsio_options_retrieve_options_ex,
+// so a single success case is sufficient for validation
+TEST_FUNCTION(tlsio_options__retrieve__succeeds)
+{
+    ///arrange
+    TLSIO_OPTIONS options;
+    TLSIO_OPTIONS_RESULT set_result;
+    OPTIONHANDLER_RESULT option_handler_result;
+    OPTIONHANDLER_HANDLE result = NULL;
+    tlsio_options_initialize(&options, TLSIO_OPTION_BIT_TRUSTED_CERTS | TLSIO_OPTION_BIT_x509_RSA_CERT | TLSIO_OPTION_BIT_x509_ECC_CERT);
+    set_result = tlsio_options_set(&options, OPTION_X509_ECC_KEY, fake_trusted_cert);
+    ASSERT_ARE_EQUAL(int, (int)set_result, (int)TLSIO_OPTIONS_RESULT_SUCCESS);
+
+    ///act
+    result = tlsio_options_retrieve_options(&options, pfSetOption_impl);
+
+    ///assert
+    ASSERT_IS_NOT_NULL(result);
+    tlsio_options_release_resources(&options);
+    tlsio_options_initialize(&options, TLSIO_OPTION_BIT_TRUSTED_CERTS | TLSIO_OPTION_BIT_x509_RSA_CERT | TLSIO_OPTION_BIT_x509_ECC_CERT);
+
+    option_handler_result = OptionHandler_FeedOptions(result, &options);
+    ASSERT_ARE_EQUAL(int, (int)option_handler_result, (int)OPTIONHANDLER_OK);
+
+    ASSERT_COPIED_STRING(options.x509_key, fake_trusted_cert);
+    ASSERT_ARE_EQUAL(int, (int)options.x509_type, (int)TLSIO_OPTIONS_x509_TYPE_ECC);
+
+    ///clean
+    tlsio_options_release_resources(&options);
+    OptionHandler_Destroy(result);
+    assert_gballoc_checks();
 }
 
 END_TEST_SUITE(tlsio_options_unittests)
