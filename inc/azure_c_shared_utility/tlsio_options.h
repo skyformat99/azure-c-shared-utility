@@ -19,14 +19,14 @@ extern "C" {
     {
         TLSIO_OPTION_BIT_NONE =          0x00,
         TLSIO_OPTION_BIT_TRUSTED_CERTS = 0x01,
-        TLSIO_OPTION_BIT_x509_CERT =     0x02,
+        TLSIO_OPTION_BIT_x509_RSA_CERT = 0x02,
         TLSIO_OPTION_BIT_x509_ECC_CERT = 0x04,
     } TLSIO_OPTION_BIT;
 
     typedef enum TLSIO_OPTIONS_x509_TYPE_TAG
     {
         TLSIO_OPTIONS_x509_TYPE_UNSPECIFIED = TLSIO_OPTION_BIT_NONE,
-        TLSIO_OPTIONS_x509_TYPE_STANDARD = TLSIO_OPTION_BIT_x509_CERT,
+        TLSIO_OPTIONS_x509_TYPE_RSA = TLSIO_OPTION_BIT_x509_RSA_CERT,
         TLSIO_OPTIONS_x509_TYPE_ECC = TLSIO_OPTION_BIT_x509_ECC_CERT
     } TLSIO_OPTIONS_x509_TYPE;
 
@@ -64,14 +64,17 @@ extern "C" {
     TLSIO_OPTIONS_RESULT tlsio_options_set(TLSIO_OPTIONS* options,  
         const char* optionName, const void* value);
 
-    // The helper for xio_retrieveoptions
-    OPTIONHANDLER_HANDLE tlsio_options_retrieve_options(TLSIO_OPTIONS* options,
+    // Use this helper for xio_retrieveoptions if this helper covers all your tlsio options
+    OPTIONHANDLER_HANDLE tlsio_options_retrieve_options(TLSIO_OPTIONS* options, pfSetOption setOption);
+
+    // Use this helper for xio_retrieveoptions if your tlsio supports more options than this helper does
+    OPTIONHANDLER_HANDLE tlsio_options_retrieve_options_ex(TLSIO_OPTIONS* options,
         pfCloneOption cloneOption, pfDestroyOption destroyOption, pfSetOption setOption);
 
-    // The helper for the anonymous clone_option
+    // The helper for the anonymous clone_option -- needed only to support extra options
     TLSIO_OPTIONS_RESULT tlsio_options_clone_option(const char* name, const void* value, void** out_value);
 
-    // The helper for the anonymous destroy_option
+    // The helper for the anonymous destroy_option -- needed only to support extra options
     TLSIO_OPTIONS_RESULT tlsio_options_destroy_option(const char* name, const void* value);
 
 

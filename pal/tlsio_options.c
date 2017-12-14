@@ -30,45 +30,25 @@ static int set_and_validate_x509_type(TLSIO_OPTIONS* options, TLSIO_OPTIONS_x509
     int result;
     if ((options->supported_options & x509_type) == 0)
     {
+        // This case also rejects the nonsensical TLSIO_OPTIONS_x509_TYPE_UNSPECIFIED
         LogError("Unsupported x509 type: %d", x509_type);
         result = __FAILURE__;
     }
     else if (options->x509_type == TLSIO_OPTIONS_x509_TYPE_UNSPECIFIED)
     {
+        // Initial type setting
         options->x509_type = x509_type;
         result = 0;
     }
-    else if (options->x509_type == TLSIO_OPTIONS_x509_TYPE_STANDARD)
+    else if (options->x509_type != x509_type)
     {
-        if (x509_type != TLSIO_OPTIONS_x509_TYPE_STANDARD)
-        {
-            result = __FAILURE__;
-        }
-        else
-        {
-            result = 0;
-        }
-    }
-    else if (options->x509_type == TLSIO_OPTIONS_x509_TYPE_ECC)
-    {
-        if (x509_type != TLSIO_OPTIONS_x509_TYPE_ECC)
-        {
-            result = __FAILURE__;
-        }
-        else
-        {
-            result = 0;
-        }
+        LogError("Supplied x509 type conflicts with previously set x509");
+        result = __FAILURE__;
     }
     else
     {
-        // This can only happen if the enum definition somehow gets out of sync with this helper function
-        LogError("Unexpected x509_type");
-        result = __FAILURE__;
-    }
-    if (result != 0)
-    {
-        LogError("Supplied x509 type conflicts with previously set x509");
+        // The types match okay
+        result = 0;
     }
 
     return result;
@@ -88,6 +68,16 @@ void tlsio_options_release_resources(TLSIO_OPTIONS* options)
     }
 }
 
+static bool is_supported_string_option(const char* name)
+{
+    return 
+        (strcmp(name, OPTION_TRUSTED_CERT) == 0) ||
+        (strcmp(name, SU_OPTION_X509_CERT) == 0) ||
+        (strcmp(name, SU_OPTION_X509_PRIVATE_KEY) == 0) ||
+        (strcmp(name, OPTION_X509_ECC_CERT) == 0) ||
+        (strcmp(name, OPTION_X509_ECC_KEY) == 0);
+}
+
 TLSIO_OPTIONS_RESULT tlsio_options_destroy_option(const char* name, const void* value)
 {
     TLSIO_OPTIONS_RESULT result;
@@ -96,13 +86,7 @@ TLSIO_OPTIONS_RESULT tlsio_options_destroy_option(const char* name, const void* 
         LogError("NULL parameter: name: %p, value: %p", name, value);
         result = TLSIO_OPTIONS_RESULT_ERROR;
     }
-    else if (
-        (strcmp(name, OPTION_TRUSTED_CERT) == 0) ||
-        (strcmp(name, SU_OPTION_X509_CERT) == 0) ||
-        (strcmp(name, SU_OPTION_X509_PRIVATE_KEY) == 0) ||
-        (strcmp(name, OPTION_X509_ECC_CERT) == 0) ||
-        (strcmp(name, OPTION_X509_ECC_KEY) == 0)
-        )
+    else if (is_supported_string_option(name))
     {
         free((void*)value);
         result = TLSIO_OPTIONS_RESULT_SUCCESS;
@@ -114,7 +98,6 @@ TLSIO_OPTIONS_RESULT tlsio_options_destroy_option(const char* name, const void* 
     return result;
 }
 
-
 TLSIO_OPTIONS_RESULT tlsio_options_clone_option(const char* name, const void* value, void** out_value)
 {
     TLSIO_OPTIONS_RESULT result;
@@ -125,73 +108,22 @@ TLSIO_OPTIONS_RESULT tlsio_options_clone_option(const char* name, const void* va
             name, value, out_value);
         result = TLSIO_OPTIONS_RESULT_ERROR;
     }
-    else
+    else if (is_supported_string_option(name))
     {
         *out_value = NULL;
-        if (strcmp(name, OPTION_TRUSTED_CERT) == 0)
+        if (mallocAndStrcpy_s((char**)out_value, value) != 0)
         {
-            if (mallocAndStrcpy_s((char**)out_value, value) != 0)
-            {
-                LogError("unable to mallocAndStrcpy_s TrustedCerts value");
-                result = TLSIO_OPTIONS_RESULT_ERROR;
-            }
-            else
-            {
-                result = TLSIO_OPTIONS_RESULT_SUCCESS;
-            }
-        }
-        else if (strcmp(name, SU_OPTION_X509_CERT) == 0)
-        {
-            if (mallocAndStrcpy_s((char**)out_value, value) != 0)
-            {
-                LogError("unable to mallocAndStrcpy_s x509certificate value");
-                result = TLSIO_OPTIONS_RESULT_ERROR;
-            }
-            else
-            {
-                result = TLSIO_OPTIONS_RESULT_SUCCESS;
-            }
-        }
-        else if (strcmp(name, SU_OPTION_X509_PRIVATE_KEY) == 0)
-        {
-            if (mallocAndStrcpy_s((char**)out_value, value) != 0)
-            {
-                LogError("unable to mallocAndStrcpy_s x509privatekey value");
-                result = TLSIO_OPTIONS_RESULT_ERROR;
-            }
-            else
-            {
-                result = TLSIO_OPTIONS_RESULT_SUCCESS;
-            }
-        }
-        else if (strcmp(name, OPTION_X509_ECC_CERT) == 0)
-        {
-            if (mallocAndStrcpy_s((char**)out_value, value) != 0)
-            {
-                LogError("unable to mallocAndStrcpy_s x509EccCertificate value");
-                result = TLSIO_OPTIONS_RESULT_ERROR;
-            }
-            else
-            {
-                result = TLSIO_OPTIONS_RESULT_SUCCESS;
-            }
-        }
-        else if (strcmp(name, OPTION_X509_ECC_KEY) == 0)
-        {
-            if (mallocAndStrcpy_s((char**)out_value, value) != 0)
-            {
-                LogError("unable to mallocAndStrcpy_s x509EccKey value");
-                result = TLSIO_OPTIONS_RESULT_ERROR;
-            }
-            else
-            {
-                result = TLSIO_OPTIONS_RESULT_SUCCESS;
-            }
+            LogError("unable to mallocAndStrcpy_s option value");
+            result = TLSIO_OPTIONS_RESULT_ERROR;
         }
         else
         {
-            result = TLSIO_OPTIONS_RESULT_NOT_HANDLED;
+            result = TLSIO_OPTIONS_RESULT_SUCCESS;
         }
+    }
+    else
+    {
+        result = TLSIO_OPTIONS_RESULT_NOT_HANDLED;
     }
     return result;
 }
@@ -200,11 +132,21 @@ TLSIO_OPTIONS_RESULT tlsio_options_set(TLSIO_OPTIONS* options,
     const char* optionName, const void* value)
 {
     TLSIO_OPTIONS_RESULT result;
+    char* copied_value = NULL;
 
     if (options == NULL || optionName == NULL || value == NULL)
     {
         LogError("NULL parameter: options: %p, optionName: %p, value: %p",
             options, optionName, value);
+        result = TLSIO_OPTIONS_RESULT_ERROR;
+    }
+    else if (!is_supported_string_option(optionName))
+    {
+        result = TLSIO_OPTIONS_RESULT_NOT_HANDLED;
+    }
+    else if(mallocAndStrcpy_s(&copied_value, value) != 0)
+    {
+        LogError("unable to mallocAndStrcpy_s option value");
         result = TLSIO_OPTIONS_RESULT_ERROR;
     }
     else if (strcmp(OPTION_TRUSTED_CERT, optionName) == 0)
@@ -214,34 +156,23 @@ TLSIO_OPTIONS_RESULT tlsio_options_set(TLSIO_OPTIONS* options,
             LogError("Trusted certs option not supported");
             result = TLSIO_OPTIONS_RESULT_ERROR;
         }
+        else if (options->trusted_certs != NULL)
+        {
+            LogError("unable to set trusted cert option more than once");
+            result = TLSIO_OPTIONS_RESULT_ERROR;
+        }
         else
         {
-            if (options->trusted_certs != NULL)
-            {
-                LogError("unable to set trusted cert option more than once");
-                result = TLSIO_OPTIONS_RESULT_ERROR;
-            }
-            else
-            {
-                // Store the certificate
-                if (mallocAndStrcpy_s((char**)&options->trusted_certs, value) != 0)
-                {
-                    LogError("unable to mallocAndStrcpy_s trusted cert value");
-                    result = TLSIO_OPTIONS_RESULT_ERROR;
-                }
-                else
-                {
-                    result = TLSIO_OPTIONS_RESULT_SUCCESS;
-                }
-            }
+            options->trusted_certs = copied_value;
+            result = TLSIO_OPTIONS_RESULT_SUCCESS;
         }
     }
     else if (strcmp(SU_OPTION_X509_CERT, optionName) == 0 || strcmp(OPTION_X509_ECC_CERT, optionName) == 0)
     {
-        TLSIO_OPTIONS_x509_TYPE this_type = (strcmp(SU_OPTION_X509_CERT, optionName) == 0) ? TLSIO_OPTIONS_x509_TYPE_STANDARD : TLSIO_OPTIONS_x509_TYPE_ECC;
+        TLSIO_OPTIONS_x509_TYPE this_type = (strcmp(SU_OPTION_X509_CERT, optionName) == 0) ? TLSIO_OPTIONS_x509_TYPE_RSA : TLSIO_OPTIONS_x509_TYPE_ECC;
         if (options->x509_cert != NULL)
         {
-            LogError("unable to set x509 options more than once");
+            LogError("unable to set x509 cert more than once");
             result = TLSIO_OPTIONS_RESULT_ERROR;
         }
         else if (set_and_validate_x509_type(options, this_type) != 0)
@@ -251,24 +182,16 @@ TLSIO_OPTIONS_RESULT tlsio_options_set(TLSIO_OPTIONS* options,
         }
         else
         {
-            /*let's make a copy of this option*/
-            if (mallocAndStrcpy_s((char**)&options->x509_cert, value) != 0)
-            {
-                LogError("unable to mallocAndStrcpy_s x509 cert value");
-                result = TLSIO_OPTIONS_RESULT_ERROR;
-            }
-            else
-            {
-                result = TLSIO_OPTIONS_RESULT_SUCCESS;
-            }
+            options->x509_cert = copied_value;
+            result = TLSIO_OPTIONS_RESULT_SUCCESS;
         }
     }
     else if (strcmp(SU_OPTION_X509_PRIVATE_KEY, optionName) == 0 || strcmp(OPTION_X509_ECC_KEY, optionName) == 0)
     {
-        TLSIO_OPTIONS_x509_TYPE this_type = (strcmp(SU_OPTION_X509_PRIVATE_KEY, optionName) == 0) ? TLSIO_OPTIONS_x509_TYPE_STANDARD : TLSIO_OPTIONS_x509_TYPE_ECC;
+        TLSIO_OPTIONS_x509_TYPE this_type = (strcmp(SU_OPTION_X509_PRIVATE_KEY, optionName) == 0) ? TLSIO_OPTIONS_x509_TYPE_RSA : TLSIO_OPTIONS_x509_TYPE_ECC;
         if (options->x509_key != NULL)
         {
-            LogError("unable to set x509 options more than once");
+            LogError("unable to set x509 key more than once");
             result = TLSIO_OPTIONS_RESULT_ERROR;
         }
         else if (set_and_validate_x509_type(options, this_type) != 0)
@@ -278,27 +201,51 @@ TLSIO_OPTIONS_RESULT tlsio_options_set(TLSIO_OPTIONS* options,
         }
         else
         {
-            /*let's make a copy of this option*/
-            if (mallocAndStrcpy_s((char**)&options->x509_key, value) != 0)
-            {
-                LogError("unable to mallocAndStrcpy_s x509 key value");
-                result = TLSIO_OPTIONS_RESULT_ERROR;
-            }
-            else
-            {
-                result = TLSIO_OPTIONS_RESULT_SUCCESS;
-            }
+            options->x509_key = copied_value;
+            result = TLSIO_OPTIONS_RESULT_SUCCESS;
         }
     }
     else
     {
-        result = TLSIO_OPTIONS_RESULT_NOT_HANDLED;
+        // This is logically impossible due to earlier tests, so just quiet the compiler
+        result = TLSIO_OPTIONS_RESULT_ERROR;
+    }
+
+    if (result != TLSIO_OPTIONS_RESULT_SUCCESS)
+    {
+        free(copied_value);
     }
 
     return result;
 }
 
-OPTIONHANDLER_HANDLE tlsio_options_retrieve_options(TLSIO_OPTIONS* options,
+// A helper that works if the tlsio does not use any extra options
+static void* local_clone_option(const char* name, const void* value)
+{
+    void* result = NULL;
+    if (tlsio_options_clone_option(name, value, &result) != TLSIO_OPTIONS_RESULT_SUCCESS)
+    {
+        LogError("Unexpected local_clone_option failure");
+    }
+    return result;
+}
+
+// A helper that works if the tlsio does not use any extra options
+void local_destroy_option(const char* name, const void* value)
+{
+    if (tlsio_options_destroy_option(name, value) != TLSIO_OPTIONS_RESULT_SUCCESS)
+    {
+        LogError("Unexpected local_destroy_option failure");
+    }
+}
+
+OPTIONHANDLER_HANDLE tlsio_options_retrieve_options(TLSIO_OPTIONS* options, pfSetOption setOption)
+{
+    return tlsio_options_retrieve_options_ex(options, local_clone_option, local_destroy_option, setOption);
+}
+
+
+OPTIONHANDLER_HANDLE tlsio_options_retrieve_options_ex(TLSIO_OPTIONS* options,
     pfCloneOption cloneOption, pfDestroyOption destroyOption, pfSetOption setOption)
 {
     OPTIONHANDLER_HANDLE result;
@@ -316,44 +263,46 @@ OPTIONHANDLER_HANDLE tlsio_options_retrieve_options(TLSIO_OPTIONS* options,
             LogError("OptionHandler_Create failed");
             /*return as is*/
         }
-        else
-        {
-            if (
+        else if (
                 (options->trusted_certs != NULL) &&
                 (OptionHandler_AddOption(result, OPTION_TRUSTED_CERT, options->trusted_certs) != OPTIONHANDLER_OK)
                 )
+        {
+            LogError("unable to save TrustedCerts option");
+            OptionHandler_Destroy(result);
+            result = NULL;
+        }
+        else if (options->x509_type != TLSIO_OPTIONS_x509_TYPE_UNSPECIFIED)
+        {
+            const char* x509_cert_option;
+            const char* x509_key_option;
+            if (options->x509_type == TLSIO_OPTIONS_x509_TYPE_ECC)
             {
-                LogError("unable to save TrustedCerts option");
+                x509_cert_option = OPTION_X509_ECC_CERT;
+                x509_key_option = OPTION_X509_ECC_KEY;
+            }
+            else
+            {
+                x509_cert_option = SU_OPTION_X509_CERT;
+                x509_key_option = SU_OPTION_X509_PRIVATE_KEY;
+            }
+            if (
+                (options->x509_cert != NULL) &&
+                (OptionHandler_AddOption(result, x509_cert_option, options->x509_cert) != OPTIONHANDLER_OK)
+                )
+            {
+                LogError("unable to save x509 cert option");
                 OptionHandler_Destroy(result);
                 result = NULL;
             }
-            else if (options->x509_type != TLSIO_OPTIONS_x509_TYPE_UNSPECIFIED)
+            else if (
+                (options->x509_key != NULL) &&
+                (OptionHandler_AddOption(result, x509_key_option, options->x509_key) != OPTIONHANDLER_OK)
+                )
             {
-                const char* x509_cert_option = SU_OPTION_X509_CERT;
-                const char* x509_key_option = SU_OPTION_X509_PRIVATE_KEY;
-                if (options->x509_type == TLSIO_OPTIONS_x509_TYPE_ECC)
-                {
-                    x509_cert_option = OPTION_X509_ECC_CERT;
-                    x509_key_option = OPTION_X509_ECC_KEY;
-                }
-                if (
-                    (options->x509_cert != NULL) &&
-                    (OptionHandler_AddOption(result, x509_cert_option, options->x509_cert) != OPTIONHANDLER_OK)
-                    )
-                {
-                    LogError("unable to save x509 cert option");
-                    OptionHandler_Destroy(result);
-                    result = NULL;
-                }
-                else if (
-                    (options->x509_key != NULL) &&
-                    (OptionHandler_AddOption(result, x509_key_option, options->x509_key) != OPTIONHANDLER_OK)
-                    )
-                {
-                    LogError("unable to save x509 key option");
-                    OptionHandler_Destroy(result);
-                    result = NULL;
-                }
+                LogError("unable to save x509 key option");
+                OptionHandler_Destroy(result);
+                result = NULL;
             }
         }
     }

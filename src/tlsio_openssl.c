@@ -199,7 +199,7 @@ static OPTIONHANDLER_HANDLE tlsio_openssl_retrieveoptions(CONCRETE_IO_HANDLE han
     else
     {
         TLS_IO_INSTANCE* tls_io_instance = (TLS_IO_INSTANCE*)handle;
-        result = tlsio_options_retrieve_options(&tls_io_instance->tlsio_options, 
+        result = tlsio_options_retrieve_options_ex(&tls_io_instance->tlsio_options, 
             tlsio_openssl_CloneOption, tlsio_openssl_DestroyOption, tlsio_openssl_setoption);
         if (result == NULL)
         {
@@ -838,7 +838,7 @@ static int create_openssl_instance(TLS_IO_INSTANCE* tlsInstance)
     }
     /*x509 authentication can only be build before underlying connection is realized*/
     else if (
-        (tlsInstance->tlsio_options.x509_type == TLSIO_OPTIONS_x509_TYPE_STANDARD) &&
+        (tlsInstance->tlsio_options.x509_type == TLSIO_OPTIONS_x509_TYPE_RSA) &&
         (tlsInstance->tlsio_options.x509_cert != NULL) &&
         (tlsInstance->tlsio_options.x509_key != NULL) &&
         (x509_openssl_add_credentials(tlsInstance->ssl_context, tlsInstance->tlsio_options.x509_cert, tlsInstance->tlsio_options.x509_key) != 0)
@@ -1020,7 +1020,7 @@ CONCRETE_IO_HANDLE tlsio_openssl_create(void* io_create_parameters)
             {
                 // This tlsio supports trusted certs, x509, and x509 ECC
                 tlsio_options_initialize(&result->tlsio_options,
-                    TLSIO_OPTION_BIT_TRUSTED_CERTS | TLSIO_OPTION_BIT_x509_CERT | TLSIO_OPTION_BIT_x509_ECC_CERT);
+                    TLSIO_OPTION_BIT_TRUSTED_CERTS | TLSIO_OPTION_BIT_x509_RSA_CERT | TLSIO_OPTION_BIT_x509_ECC_CERT);
                 result->in_bio = NULL;
                 result->out_bio = NULL;
                 result->on_bytes_received = NULL;
