@@ -6,18 +6,20 @@
 install_root="$HOME" 
 build_root=$(cd "$(dirname "$0")/.." && pwd) 
 cd $build_root
+
 # ----------------------------------------------------------------------------- 
 # -- helper subroutines 
 # -----------------------------------------------------------------------------
 checkExists() {
-if hash $1 2>/dev/null;
-then
-return 1
-else
-echo "$1" not found. Please make sure that "$1" is installed and available in the path.
-exit 1
-fi
+    if hash $1 2>/dev/null;
+    then
+        return 1
+    else
+        echo "$1" not found. Please make sure that "$1" is installed and available in the path.
+        exit 1
+    fi
 }
+
 # ----------------------------------------------------------------------------- 
 # -- Check for environment pre-requisites. This script requires -- that 
 # the following programs work: -- curl build-essential(g++,gcc,make) 
@@ -29,19 +31,22 @@ checkExists gcc
 checkExists make 
 checkExists cmake 
 checkExists git
+
 # ----------------------------------------------------------------------------- 
 # -- Check for RPiTools directory.
 # -----------------------------------------------------------------------------
 if [ ! -d "$install_root/RPiTools" ];
 then
-echo ---------- Raspberry Pi tool-chain absent ----------
-exit 1
+    echo ---------- Raspberry Pi tool-chain absent ----------
+    exit 1
 fi
+
 # ----------------------------------------------------------------------------- 
 # -- Set environment variable
 # -----------------------------------------------------------------------------
 cd $install_root/RPiTools/tools/arm-bcm2708/gcc-linaro-arm-linux-gnueabihf-raspbian-x64/arm-linux-gnueabihf 
 export RPI_ROOT=$(pwd)
+
 # ----------------------------------------------------------------------------- 
 # -- Create toolchain-rpi.cmake 
 # -----------------------------------------------------------------------------
@@ -76,7 +81,8 @@ CORES=$(grep -c ^processor /proc/cpuinfo 2>/dev/null || sysctl -n hw.ncpu)
 rm -r -f $build_folder
 mkdir -p $build_folder
 pushd $build_folder
-cmake --toolchain-file $FILE -cl --sysroot=$RPI_ROOT -Drun_valgrind:BOOL=ON $build_root -Drun_unittests:BOOL=ON -Duse_wsio:BOOL=ON  
+
+cmake -DCMAKE_TOOLCHAIN_FILE $FILE -cl --sysroot=$RPI_ROOT -Drun_valgrind:BOOL=ON $build_root -Drun_unittests:BOOL=ON -Duse_wsio:BOOL=ON
 make --jobs=$CORES
 
 #use doctored openssl
