@@ -46,29 +46,39 @@ export RPI_ROOT=$(pwd)
 # -- Create toolchain-rpi.cmake 
 # -----------------------------------------------------------------------------
 echo ---------- Creating toolchain cmake file ---------- 
-FILE="$build_root/build_all/linux/toolchain-rpi.cmake" 
+FILE="$build_root/build_all/linux/toolchain-rpi.cmake"
+
 /bin/cat <<EOM >$FILE
 INCLUDE(CMakeForceCompiler) 
+
 SET(CMAKE_SYSTEM_NAME Linux) # this one is important 
 SET(CMAKE_SYSTEM_VERSION 1) # this one not so much
+
 # this is the location of the amd64 toolchain targeting the Raspberry Pi
 SET(CMAKE_C_COMPILER ${RPI_ROOT}/../bin/arm-linux-gnueabihf-gcc)
+
 # this is the file system root of the target
 SET(CMAKE_FIND_ROOT_PATH ${RPI_ROOT})
+
 # search for programs in the build host directories
 SET(CMAKE_FIND_ROOT_PATH_MODE_PROGRAM NEVER)
+
 # for libraries and headers in the target directories
 SET(CMAKE_FIND_ROOT_PATH_MODE_LIBRARY ONLY) 
 SET(CMAKE_FIND_ROOT_PATH_MODE_INCLUDE ONLY) 
 EOM
+
 build_folder=$build_root"/cmake/shared-util_linux"
+
 # Set the default cores
 CORES=$(grep -c ^processor /proc/cpuinfo 2>/dev/null || sysctl -n hw.ncpu)
+
 rm -r -f $build_folder
 mkdir -p $build_folder
 pushd $build_folder
-cmake --toolchain-file toolchain-rpi.cmake --no-mqtt -cl --sysroot=$RPI_ROOT -Drun_valgrind:BOOL=ON $build_root -Drun_unittests:BOOL=ON -Duse_wsio:BOOL=ON  
+cmake --toolchain-file $FILE -cl --sysroot=$RPI_ROOT -Drun_valgrind:BOOL=ON $build_root -Drun_unittests:BOOL=ON -Duse_wsio:BOOL=ON  
 make --jobs=$CORES
+
 #use doctored openssl
 export LD_LIBRARY_PATH=/usr/local/ssl/lib
 ctest -j $CORES --output-on-failure
